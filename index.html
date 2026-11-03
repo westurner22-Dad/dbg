@@ -1,0 +1,121 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>DBG prototype</title><style>
+body{font-family:system-ui,sans-serif;margin:0 auto;background:#111;color:#eee;max-width:520px;padding:8px;padding-bottom:40px;-webkit-text-size-adjust:100%}
+@media(min-width:700px){body{max-width:760px}.c{font-size:13px}}@media(max-width:380px){button{font-size:14px;padding:8px}.c{font-size:9px}}
+.tip{background:#233;padding:6px;border-radius:6px;margin:4px 0;font-size:14px}.cov{box-shadow:inset 0 0 0 2px #39f}.reach{background-image:linear-gradient(rgba(45,221,85,.18),rgba(45,221,85,.18))}
+.card{display:inline-block;border:1px solid #555;border-radius:8px;padding:8px;margin:3px;min-width:120px;vertical-align:top}.card.sel{border-color:#fd0}.pc{display:flex;gap:8px;align-items:center;background:#1a1a2a;padding:8px;border-radius:8px}.pimg{width:72px;height:72px;border-radius:8px;background:#335;display:flex;align-items:center;justify-content:center;font-size:30px}
+.t{display:inline-block;width:23%;margin:1%;padding:4px;border-radius:6px;font-size:11px;background:#222;vertical-align:top;box-sizing:border-box}.t.o0{background:#164}.t.o1{background:#634}.t.o2{background:#446}.t.o3{background:#553}.t.at{outline:3px solid #fd0}.t.adj{outline:2px dashed #fd0}
+button{font-size:16px;padding:10px 12px;margin:3px;border-radius:8px;border:0;background:#2d5;color:#000}button.s{background:#555;color:#fff}
+input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-box;margin:2px 0}
+#grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;margin:6px 0}.c{aspect-ratio:1;background:#222;font-size:11px;display:flex;align-items:center;justify-content:center;border-radius:3px;position:relative;overflow:hidden;text-align:center}
+.lane{background:#2a2a3a}.pad{outline:2px dashed #666}.difficult{background:#4a3a20}.high{background:#2f4f2f}.hazard{background:#5a1a1a}.obstacle{background:#000}
+.me{outline:3px solid #2d5}.rng{box-shadow:inset 0 0 0 2px #fd0}.log{white-space:pre-wrap;font-size:13px;background:#000;padding:6px;max-height:200px;overflow:auto}
+.row{display:flex;flex-wrap:wrap;align-items:center}.big{font-size:22px;font-weight:bold}h2{margin:6px 0}
+</style></head><body><div id="app"></div>
+<script src="logic.js"></script><script src="aa.js"></script><script src="nascent.js"></script><script>
+const $=s=>document.querySelector(s); let showCov=true, aa=null, G=null; let st=JSON.parse(localStorage.getItem('dbg_p1')||'null')||{c:null,rounds:[]}; let w=null, sel=null, timerI=null;
+const save=()=>localStorage.setItem('dbg_p1',JSON.stringify(st));
+function log(lines){ st.c.log=(st.c.log||[]).concat(lines).slice(-80); save(); }
+function view(h){ $('#app').innerHTML=h; }
+function create(){ view(`<h2>Create cultivator</h2>Name<input id=n value="Wes">Role<select id=r>${Object.keys(DBG.ROLES).map(r=>`<option>${r}</option>`)}</select>
+ <p>Base 5/5/5/5. Spend exactly <b>10</b> creation points (max 15 in any stat; no focus bonus). Level 1 then adds +1 focus, +1 Affinity, +3 flex (auto to focus).</p>
+ ${DBG.ATTR.map(a=>`<div class=row>${a}&nbsp;<input type=number id=a_${a} value=${a=='Aff'?4:2} min=0 max=10 style="width:80px"></div>`).join('')}
+ Player slot<select id=slot><option value=1>Player 1</option><option value=2>Player 2</option><option value=3>Player 3</option><option value=4>Player 4</option></select>Equipped weapon<select id=wp><option>Jade Sword</option><option>Iron Staff</option><option>Twin Fans</option><option>Spirit Focus</option><option>Tower Shield & Mace</option></select>Portrait preferences<textarea id=pp placeholder="e.g. tall, silver hair, jade robes"></textarea>
+ <button onclick="doCreate()">Create</button><div id=err></div>`); }
+function doCreate(){ try{ const al={}; DBG.ATTR.forEach(a=>al[a]=+$('#a_'+a).value); st.c=DBG.createCharacter($('#n').value,$('#r').value,al); st.c.portraitPrefs=$('#pp').value; st.c.slot=+$('#slot').value; st.c.weapon=$('#wp').value; save(); Portrait.request(st.c); day(); }catch(e){ $('#err').textContent=e.message; } }
+function day(){ const c=st.c; const wk=((c.day-1)%7)>=5;
+ view(`<h2>${c.name} — ${c.role} · ${c.realm} ${c.level}</h2>
+ <div>Day ${c.day} (${wk?'weekend':'weekday'}) · XP today ${c.xpToday}/${DBG.XP_GOAL} · Inspiration ${c.insp}/3 · Catch-up charges ${c.charges}/3</div>
+ <div>Str ${c.attr.Str} Spd ${c.attr.Spd} Tough ${c.attr.Tough} Aff ${c.attr.Aff} · Move ${DBG.movement(c)} · Init ${DBG.initiative(c)}</div>
+ ${portraitCard()}<div class=tip>${tipDay()}</div><h3>Recipes</h3>${c.recipes.map((r,i)=>`<label><input type=radio name=rc value=${i} ${i==0?'checked':''} style="width:auto"> ${r.name} ${r.prog}/${r.need}</label><br>`).join('')}
+ <div class=row><button onclick="htl()">Hold the Line (Watch)</button><button onclick="aaStart()">Ash Archives</button><button onclick="nasStart()">Nascent turns</button><button onclick="act('meditate')">Meditate</button>
+ <button class=s onclick="act('insp')">Spend Inspiration</button><button class=s onclick="act('charge')">Spend catch-up charge</button>
+ <button class=s onclick="act('end',true)">End day (played)</button><button class=s onclick="act('end',false)">End day (skipped)</button>
+ <button class=s onclick="scoreView()">Score</button></div><details><summary>Test shortcuts / portrait</summary><div class=row>Level <input id=tl type=number min=1 max=10 value=${c.level} style=width:70px><button class=s onclick="setLvl()">Set level</button><button class=s onclick="c_xp()">+50 XP</button><button class=s onclick="skipDays(1)">+1 day</button><button class=s onclick="skipDays(7)">+7 days</button><button class=s onclick="act('cheat')">+1 Insp</button>
+AA test role <select id=aarole><option>as character</option><option>Bruiser</option><option>Striker</option></select></div>Weapon<select id=wp2 onchange="st.c.weapon=this.value;save();Portrait.request(st.c);day()">${['Jade Sword','Iron Staff','Twin Fans','Spirit Focus','Tower Shield & Mace'].map(x=>`<option ${x==c.weapon?'selected':''}>${x}</option>`).join('')}</select>Portrait preferences<textarea oninput="st.c.portraitPrefs=this.value;save();Portrait.request(st.c)">${c.portraitPrefs||''}</textarea></details><div class=row><button class=s onclick="if(confirm('Reset save?')){localStorage.removeItem('dbg_p1');location.reload()}">Reset</button></div>
+ <div class=log>${(c.log||[]).slice().reverse().join('\n')}</div>`); }
+function act(a,arg){ const c=st.c, i=+(document.querySelector('input[name=rc]:checked')||{value:0}).value; const wk=((c.day-1)%7)>=5;
+ if(a==='meditate') log(DBG.meditate(c,i)); if(a==='insp') log(DBG.spendInspiration(c,i)); if(a==='charge') log(DBG.spendCharge(c,i));
+ if(a==='end') log(['— end of day '+c.day].concat(DBG.endDay(c,arg,wk))); if(a==='cheat'){c.insp=Math.min(3,c.insp+1);} save(); day(); }
+function htl(){ w=DBG.newWatch(st.c); DBG.startWave(w,w.fails>=2); sel=null; draw(); clearInterval(timerI); timerI=setInterval(()=>{const t=$('#tm'); if(t&&w&&!w.waveOver) t.textContent=((Date.now()-w.roundStart)/1000).toFixed(1)+' s';},200); }
+function draw(){ const L=w.L, ln=DBG.lanesFor(L), pads=DBG.padsFor(L), tg=DBG.targetsInRange(w), cov=DBG.towerCover(w), reach=w.moved||w.ko?{}:DBG.reachable(w); let g='';
+ for(let y=0;y<10;y++) for(let x=0;x<8;x++){ const k=x+','+y, t=w.terr[k]||'', tw=w.towers[k];
+  const es=w.active.filter(e=>e.lane===x&&Math.min(9,Math.floor(e.row))===y);
+  let cls='c '+(showCov&&cov[k]?'cov ':'')+(!sel&&reach[k]?'reach ':'')+(ln.includes(x)?'lane ':'')+(pads.some(p=>p[0]==x&&p[1]==y)?'pad ':'')+t+(w.ppos[0]==x&&w.ppos[1]==y?' me':'')+(es.some(e=>tg.includes(e))?' rng':'');
+  let txt=tw?tw.t.slice(0,4)+tw.tier:''; if(es.length) txt+=' '+es.map(e=>(e.mb?'★':'')+e.k[0]+Math.round(100*e.hp/e.mx)).join(' ');
+  if(w.ppos[0]==x&&w.ppos[1]==y) txt='YOU'+(w.ko?' KO':''); if(y==9&&!txt) txt=ln.includes(x)?'GATE':'';
+  g+=`<div class="${cls}" onclick="tap(${x},${y})">${txt}</div>`; }
+ view(`<div class=row><span class=big>Wave ${w.wave}/3 · Round ${w.round+1}</span>&nbsp;<span class=big id=tm>0.0 s</span></div>
+ <div>Gate ${w.gate}/20 · Stones ${Math.floor(w.stones)} · HP ${Math.round(w.php)}/${Math.round(w.pmax)} · Move ${DBG.movement(w.c)} · Range ${DBG.playerRange(w)} · queue ${w.queue.length}</div>
+ <div class=tip>${tipHtl()}</div><div id=grid>${g}</div>
+ <div class=row>Build: ${Object.keys(DBG.TW).map(t=>`<button class=${sel==t?'':'s'} onclick="sel='${t}';draw()">${t} ${DBG.towerCost(w,t,'build')}</button>`).join('')}<button class=s onclick="sel='up';draw()">Upgrade</button><button class=s onclick="showCov=!showCov;draw()">Ranges ${showCov?'on':'off'}</button><button class=s onclick="sel=null;draw()">Move mode</button></div>
+ <div class=row>${w.waveOver?`<b>${w.result==='clear'?'Wave cleared':'Wave failed'}</b>&nbsp;${w.result==='clear'&&w.wave<3?'<button onclick="nextWave()">Next wave</button>':''}${w.result!=='clear'?'<button onclick="retry()">Retry wave</button>':''}<button class=s onclick="leave()">Back to day</button>`:
+  `<button onclick="atk()">Attack (${w.acted?'done':'ready'})</button><button onclick="endR()">End round</button><button class=s onclick="leave()">Pause/leave</button>`}</div>
+ <div class=log>${(w.msgs||[]).slice(-6).join('\n')}\nTerrain: brown=difficult(2 move) green=high(+1 range) red=hazard(5%/rd) black=obstacle(LOS)\nRound times: ${w.roundLog.slice(-8).map(r=>r.sec+'s').join(', ')}</div>
+ <button class=s onclick="exportTimes()">Export round-time log (CSV)</button>`); }
+function tap(x,y){ if(w.waveOver) return; let m;
+ if(sel==='up') m=DBG.upgrade(w,x+','+y); else if(sel) m=DBG.build(w,[x,y],sel); else m=DBG.movePlayer(w,[x,y]); w.msgs.push(m); draw(); }
+function atk(){ w.msgs.push(DBG.playerAttack(w)); draw(); }
+function endR(){ const r=DBG.endRound(w); const lr=w.roundLog[w.roundLog.length-1]; st.rounds.push({...lr,role:w.role,level:w.L,t:new Date().toISOString(),ua:navigator.userAgent.slice(0,60)}); save(); if(r) w.msgs.push(r); if(w.waveOver){ DBG.waveReward(st.c,w); log(['Hold the Line wave '+w.wave+': '+w.result+' in '+w.round+' rounds']); } draw(); }
+function nextWave(){ DBG.startWave(w,w.fails>=2); draw(); }
+function retry(){ w.gate=20; w.wave--; DBG.startWave(w,w.fails>=2); w.msgs.push(w.fails>=2?'Assist mode: -25% wave HP':''); draw(); }
+function leave(){ clearInterval(timerI); w=null; save(); day(); }
+function exportTimes(){ const csv='t,role,level,wave,round,sec,ua\n'+st.rounds.map(r=>[r.t,r.role,r.level,r.wave,r.round,r.sec,'"'+r.ua+'"'].join(',')).join('\n');
+ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='htl_round_times.csv'; a.click(); }
+function scoreView(){ const c=st.c; const pace=Math.min(100,c.level*10), att=Math.min(100,Object.values(c.attr).reduce((a,b)=>a+b,0)/80*100);
+ const tech=100*c.recipes.reduce((a,r)=>a+r.prog/r.need,0)/c.recipes.length; const cats={'Cultivation Pace':pace,'Attributes':att,'Technique Mastery':tech,'Equipment':0,'Weekend Contribution':0,'Economy':0,'Monster':0};
+ const s=DBG.score(cats,c.achievements||0);
+ view(`<h2>Score (prototype estimate)</h2>${Object.keys(DBG.WEIGHTS).map(k=>`${k} (${DBG.WEIGHTS[k]}%): ${cats[k].toFixed(0)}/100`).join('<br>')}
+ <br>Achievements: ${c.achievements||0}/86 pts → +${s.bonus} (separate, max +3)<p class=big>${s.total} / 103</p>
+ <small>Pace/Attributes/Technique are solo-vs-target estimates; Equipment, Weekend, Economy, Monster are stubbed at 0 (no other players or loot in Phase 1).</small><br><button onclick="day()">Back</button>`); }
+
+// ---------- tutorial lines ----------
+function tipDay(){ const c=st.c; if(c.xpToday<DBG.XP_GOAL) return 'Tip: earn 100 XP (2 Hold the Line waves or 2 Ash Archives runs), then Meditate for your level and a d20 discovery roll (11+ = progress).';
+ if(!c.medToday) return 'Tip: daily goal reached. Meditate now.'; if(c.charges) return 'Tip: spend a catch-up charge for an extra Meditation (needs +50 XP per charge).'; return 'Tip: done for today. End the day (or keep playing for gold).'; }
+function tipHtl(){ if(w.waveOver) return w.result==='clear'?'Wave cleared. Next wave, or back to the day.':'Gate fell. Retry (after 2 fails: assist -25% wave HP).';
+ if(sel&&sel!=='up') return 'Tap a dashed pad to build '+sel+(sel==='Bastion'?' (on a lane, row 8)':'')+'. Blue outline = tower coverage.';
+ if(!w.moved) return 'Tap a green-tinted square to move (brown costs 2). Then Attack (yellow = in range), then End round.';
+ if(!w.acted) return 'Attack enemies outlined in yellow, then End round. Towers fire automatically.'; return 'End round when ready. The timer logs how long each round takes.'; }
+function setLvl(){ st.c.level=Math.max(1,Math.min(10,+$('#tl').value)); save(); day(); }
+function c_xp(){ st.c.xpToday+=50; save(); day(); }
+function skipDays(n){ for(let i=0;i<n;i++){ const wk=((st.c.day-1)%7)>=5; log(DBG.endDay(st.c,true,wk)); } save(); day(); }
+// ---------- portrait stub (cultivation_02 LOCKED Nov 3): debounce 5 s + cache by prefs+gear+slot; no real generation ----------
+const Portrait={timer:null,cache:JSON.parse(localStorage.getItem('dbg_pcache')||'{}'),pending:false,
+ heldItem:c=>(c.slot||1)===1?(c.weapon||'Jade Sword'):'big blue dildo',
+ key:c=>{ const s=(c.portraitPrefs||'')+'|'+Portrait.heldItem(c)+'|'+(c.slot||1); let h=0; for(const ch of s) h=(h*31+ch.charCodeAt(0))|0; return 'p'+(h>>>0).toString(16); },
+ request(c){ clearTimeout(this.timer); this.pending=true; this.timer=setTimeout(()=>this.generate(c),5000); },
+ generate(c){ const k=this.key(c); this.pending=false; if(!this.cache[k]){ this.cache[k]={prefs:c.portraitPrefs,held:this.heldItem(c),at:new Date().toISOString()}; /* HOOK: call the image generator here */ localStorage.setItem('dbg_pcache',JSON.stringify(this.cache)); } st.c.portraitKey=k; save(); if($('#pcard')) $('#pcard').outerHTML=portraitCard(); }};
+function portraitCard(){ const c=st.c, k=c.portraitKey, e=k&&Portrait.cache[k];
+ return `<div class=pc id=pcard><div class=pimg>${(c.slot||1)===1?'⚔️':'🔵'}</div><div><b>${c.name}</b> · Player ${c.slot||1}<br>Holding: <b>${Portrait.heldItem(c)}</b><br><small>${c.portraitPrefs||'(no portrait preferences)'}<br>${Portrait.pending?'regenerating…':e?'cached '+k:'not generated'} · placeholder (no image generation)</small></div></div>`; }
+// ---------- Ash Archives ----------
+function aaStart(){ const sel=$('#aarole'), role=sel&&sel.value!=='as character'?sel.value:st.c.role; aa=AA.newRun(role,st.c.level,{assist:(st.aaFails||0)>=2}); aaFocus=null; aaDraw(); clearInterval(timerI); timerI=setInterval(()=>{const t=$('#tm'); if(t&&aa&&!aa.over) t.textContent=((Date.now()-aa.roundStart)/1000).toFixed(1)+' s';},200); }
+let aaFocus=null;
+function aaDraw(){ const r=aa; view(`<div class=row><span class=big>Ash Archives · ${r.room<3?'Room '+(r.room+1)+'/3':'Keeper'} · Round ${r.roomRounds+1}</span>&nbsp;<span class=big id=tm>0.0 s</span></div>
+ <div>${r.role}${r.role!==st.c.role?' (test role)':''} · Core-style L${r.L} · HP ${Math.max(0,Math.round(r.hp))}/${Math.round(r.mx)} · Tonics ${r.pots}/3${r.sil?' · SILENCED':''}${r.assist?' · assist -25%':''}</div>
+ <div class=tip>${r.over?(r.result==='clear'?'Run cleared (+50 XP).':'Run failed. After 2 fails today: assist mode.'):'Tap an enemy card to focus it, then Attack ('+(AA.KIT[r.role].aoe>1?'hits '+AA.KIT[r.role].aoe+' targets':'single target')+'). Tonics are free (+50% HP).'}</div>
+ <div>${r.ens.map((e,i)=>`<div class="card ${aaFocus===i?'sel':''}" onclick="aaFocus=${i};aaDraw()"><b>${e.k}</b>${e.keeper?' 👑':''}<br>${Math.round(e.hp)}/${Math.round(e.mx)}</div>`).join('')}</div>
+ <div class=row>${r.over?'<button onclick="aaStart()">New run</button><button class=s onclick="aaLeave()">Back to day</button>':'<button onclick="aaAct()">Attack</button><button class=s onclick="AA.tonic(aa);aaDraw()">Ash Tonic</button><button class=s onclick="aaLeave()">Leave</button>'}</div>
+ <div class=log>${r.log.slice(-6).join('\n')}</div><button class=s onclick="exportAA()">Export AA log (CSV)</button>`); }
+function aaAct(){ AA.act(aa,'attack',aaFocus); aaFocus=null; const lr=aa.roundLog[aa.roundLog.length-1]; (st.aaRounds=st.aaRounds||[]).push({...lr,role:aa.role,level:aa.L,t:new Date().toISOString()});
+ if(aa.over){ (st.aaRuns=st.aaRuns||[]).push({t:new Date().toISOString(),role:aa.role,level:aa.L,result:aa.result,rounds:aa.rounds,room:aa.room,assist:aa.assist}); if(aa.result==='clear'){ st.c.xpToday+=50; } else st.aaFails=(st.aaFails||0)+1; log(['Ash Archives ('+aa.role+'): '+aa.result+' in '+aa.rounds+' rounds']); }
+ save(); aaDraw(); }
+function aaLeave(){ clearInterval(timerI); aa=null; day(); }
+function exportAA(){ const rows=(st.aaRuns||[]).map(r=>['run',r.t,r.role,r.level,r.result,r.rounds,r.room,r.assist].join(',')).concat((st.aaRounds||[]).map(r=>['round',r.t,r.role,r.level,r.room,r.round,r.sec].join(',')));
+ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['type,t,role,level,result/room,rounds/round,room/sec,assist\n'+rows.join('\n')],{type:'text/csv'})); a.download='aa_log.csv'; a.click(); }
+// ---------- Nascent ----------
+function nasStart(){ G=st.nas?Object.assign(NAS.newGame(),st.nas,{rng:Math.random}):NAS.newGame(); if(NAS.active(G)!==0) NAS.endTurn(G); nasDraw(); }
+let nSel=null;
+function nasSave(){ const {rng,...rest}=G; st.nas=rest; save(); }
+function nasDraw(){ const me=G.players[0], reach=NAS.reachMarch(G,me);
+ const tiles=Object.keys(G.own).map(Number).map(t=>{ const o=G.own[t]; const adj=NAS.ADJ[me.at].includes(t)&&o.o!==0&&!NAS.isHome(t);
+  return `<div class="t o${o.o<0?'x':o.o} ${me.at==t?'at':''} ${adj?'adj':''}" onclick="nTap(${t})"><b>${NAS.name(t)}</b><br>${o.o<0?'Collective':G.players[o.o].name} ${o.g?'· '+o.g:''}${G.bld[t]?' · '+G.bld[t]:''}${me.at==t?'<br>ARMY '+me.army:''}</div>`; }).join('');
+ view(`<h2>Nascent · Day ${G.day} · Round ${G.round}</h2><div>Your turn · phase ${G.phase} · attacks left ${G.attacks} · army ${me.army}/${me.mob?40:20} · Generals ${me.gens.join(',')} (with army: ${me.armyGen||'none'}) · gold ${me.gold} · level ${me.level} · territories ${NAS.owned(G,0).length}</div>
+ <div class=tip>Tap your territory to march (2 steps through own land; Road +1). Tap a dashed enemy tile to attack (max 2). Then fortify (garrison or Watchtower/Road at the army's tile) and End turn. Midnight = levels (1 per 5, max 4; Nexus counts 2), gold 1,300×√T, +5 units. Homelands can't be attacked; nobody is eliminated.</div>
+ <div class=row><button onclick="NAS.endTurn(G);nasSave();nasDraw()">End turn</button><button class=s onclick="G.log.push(NAS.fortify(G,'garrison'));nasDraw()">Garrison +2</button><button class=s onclick="G.log.push(NAS.fortify(G,'Watchtower'));nasDraw()">Watchtower</button><button class=s onclick="G.log.push(NAS.fortify(G,'Road'));nasDraw()">Road</button>
+ <button class=s onclick="cycleGen()">General: ${me.armyGen||'none'}</button><button class=s onclick="NAS.midnight(G);nasSave();nasDraw()">Midnight (test)</button><button class=s onclick="if(confirm('New Nascent map?')){st.nas=null;nasStart()}">Reset map</button><button class=s onclick="nasSave();day()">Back</button></div>
+ <div>${tiles}</div><div class=log>${G.log.slice(-8).reverse().join('\n')}</div>`); }
+function cycleGen(){ const p=G.players[0]; if(!p.gens.length) return; const i=p.gens.indexOf(p.armyGen); p.armyGen=p.gens[(i+1)%p.gens.length]; nasDraw(); }
+function nTap(t){ const me=G.players[0]; if(G.own[t].o===0){ G.log.push(NAS.march(G,t)); } else G.log.push(NAS.attack(G,t)); nasSave(); nasDraw(); }
+
+st.c?day():create();
+</script></body></html>
