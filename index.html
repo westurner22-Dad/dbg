@@ -13,7 +13,7 @@ input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-bo
 .me{outline:3px solid #2d5}.rng{box-shadow:inset 0 0 0 2px #fd0}.log{white-space:pre-wrap;font-size:13px;background:#000;padding:6px;max-height:200px;overflow:auto}
 .row{display:flex;flex-wrap:wrap;align-items:center}.big{font-size:22px;font-weight:bold}h2{margin:6px 0}
 </style></head><body><div id="app"></div>
-<script src="logic.js"></script><script src="aa.js"></script><script src="nascent.js"></script><script src="htl2.js"></script><script>
+<script src="logic.js"></script><script src="nascent.js"></script><script src="htl2.js"></script><script>
 const $=s=>document.querySelector(s); let showCov=true, aa=null, G=null; let st=JSON.parse(localStorage.getItem('dbg_p1')||'null')||{c:null,rounds:[]}; let w=null, sel=null, timerI=null;
 const save=()=>localStorage.setItem('dbg_p1',JSON.stringify(st));
 function log(lines){ st.c.log=(st.c.log||[]).concat(lines).slice(-80); save(); }
@@ -29,11 +29,11 @@ function day(){ const c=st.c; const wk=((c.day-1)%7)>=5;
  <div>Day ${c.day} (${wk?'weekend':'weekday'}) · XP today ${c.xpToday}/${DBG.XP_GOAL} · Inspiration ${c.insp}/3 · Catch-up charges ${c.charges}/3</div>
  <div>Str ${c.attr.Str} Spd ${c.attr.Spd} Tough ${c.attr.Tough} Aff ${c.attr.Aff} · Move ${DBG.movement(c)} · Init ${DBG.initiative(c)}</div>
  ${portraitCard()}<div class=tip>${tipDay()}</div><h3>Recipes</h3>${c.recipes.map((r,i)=>`<label><input type=radio name=rc value=${i} ${i==0?'checked':''} style="width:auto"> ${r.name} ${r.prog}/${r.need}</label><br>`).join('')}
- <div class=row><button onclick="htl()">Hold the Line (Watch)</button><button onclick="aaStart()">Ash Archives</button><button onclick="nasStart()">Nascent turns</button><button onclick="act('meditate')">Meditate</button>
+ <div class=row><button onclick="htl()">Hold the Line (Watch)</button><button onclick="nasStart()">Nascent turns</button><button onclick="act('meditate')">Meditate</button>
  <button class=s onclick="act('insp')">Spend Inspiration</button><button class=s onclick="act('charge')">Spend catch-up charge</button>
  <button class=s onclick="act('end',true)">End day (played)</button><button class=s onclick="act('end',false)">End day (skipped)</button>
  <button class=s onclick="scoreView()">Score</button></div><details><summary>Test shortcuts / portrait</summary><div class=row>Level <input id=tl type=number min=1 max=10 value=${c.level} style=width:70px><button class=s onclick="setLvl()">Set level</button><button class=s onclick="c_xp()">+50 XP</button><button class=s onclick="skipDays(1)">+1 day</button><button class=s onclick="skipDays(7)">+7 days</button><button class=s onclick="act('cheat')">+1 Insp</button>
-AA test role <select id=aarole><option>as character</option><option>Bruiser</option><option>Striker</option></select></div>Weapon<select id=wp2 onchange="st.c.weapon=this.value;save();Portrait.request(st.c);day()">${['Jade Sword','Iron Staff','Twin Fans','Spirit Focus','Tower Shield & Mace'].map(x=>`<option ${x==c.weapon?'selected':''}>${x}</option>`).join('')}</select>Portrait preferences<textarea oninput="st.c.portraitPrefs=this.value;save();Portrait.request(st.c)">${c.portraitPrefs||''}</textarea></details><div class=row><button class=s onclick="if(confirm('Reset save?')){localStorage.removeItem('dbg_p1');location.reload()}">Reset</button></div>
+</div>Weapon<select id=wp2 onchange="st.c.weapon=this.value;save();Portrait.request(st.c);day()">${['Jade Sword','Iron Staff','Twin Fans','Spirit Focus','Tower Shield & Mace'].map(x=>`<option ${x==c.weapon?'selected':''}>${x}</option>`).join('')}</select>Portrait preferences<textarea oninput="st.c.portraitPrefs=this.value;save();Portrait.request(st.c)">${c.portraitPrefs||''}</textarea></details><div class=row><button class=s onclick="if(confirm('Reset save?')){localStorage.removeItem('dbg_p1');location.reload()}">Reset</button></div>
  <div class=log>${(c.log||[]).slice().reverse().join('\n')}</div>`); }
 function act(a,arg){ const c=st.c, i=+(document.querySelector('input[name=rc]:checked')||{value:0}).value; const wk=((c.day-1)%7)>=5;
  if(a==='meditate') log(DBG.meditate(c,i)); if(a==='insp') log(DBG.spendInspiration(c,i)); if(a==='charge') log(DBG.spendCharge(c,i));
@@ -71,7 +71,7 @@ function scoreView(){ const c=st.c; const pace=Math.min(100,c.level*10), att=Mat
  <small>Pace/Attributes/Technique are solo-vs-target estimates; Equipment, Weekend, Economy, Monster are stubbed at 0 (no other players or loot in Phase 1).</small><br><button onclick="day()">Back</button>`); }
 
 // ---------- tutorial lines ----------
-function tipDay(){ const c=st.c; if(c.xpToday<DBG.XP_GOAL) return 'Tip: earn 100 XP (2 Hold the Line waves or 2 Ash Archives runs), then Meditate for your level and a d20 discovery roll (11+ = progress).';
+function tipDay(){ const c=st.c; if(c.xpToday<DBG.XP_GOAL) return 'Tip: earn 100 XP (2 Hold the Line waves), then Meditate for your level and a d20 discovery roll (11+ = progress).';
  if(!c.medToday) return 'Tip: daily goal reached. Meditate now.'; if(c.charges) return 'Tip: spend a catch-up charge for an extra Meditation (needs +50 XP per charge).'; return 'Tip: done for today. End the day (or keep playing for gold).'; }
 function tipHtl(){ if(w.waveOver) return w.result==='clear'?'Wave cleared. Next wave, or back to the day.':'Gate fell. Retry (after 2 fails: assist -25% wave HP).';
  if(sel&&sel!=='up') return 'Tap a dashed pad to build '+sel+(sel==='Bastion'?' (on a lane, row 8)':'')+'. Blue outline = tower coverage.';
@@ -88,21 +88,6 @@ const Portrait={timer:null,cache:JSON.parse(localStorage.getItem('dbg_pcache')||
  generate(c){ const k=this.key(c); this.pending=false; if(!this.cache[k]){ this.cache[k]={prefs:c.portraitPrefs,held:this.heldItem(c),at:new Date().toISOString()}; /* HOOK: call the image generator here */ localStorage.setItem('dbg_pcache',JSON.stringify(this.cache)); } st.c.portraitKey=k; save(); if($('#pcard')) $('#pcard').outerHTML=portraitCard(); }};
 function portraitCard(){ const c=st.c, k=c.portraitKey, e=k&&Portrait.cache[k];
  return `<div class=pc id=pcard><div class=pimg>${(c.slot||1)===1?'⚔️':'🔵'}</div><div><b>${c.name}</b> · Player ${c.slot||1}<br>Holding: <b>${Portrait.heldItem(c)}</b><br><small>${c.portraitPrefs||'(no portrait preferences)'}<br>${Portrait.pending?'regenerating…':e?'cached '+k:'not generated'} · placeholder (no image generation)</small></div></div>`; }
-// ---------- Ash Archives ----------
-function aaStart(){ const sel=$('#aarole'), role=sel&&sel.value!=='as character'?sel.value:st.c.role; aa=AA.newRun(role,st.c.level,{assist:(st.aaFails||0)>=2}); aaFocus=null; aaDraw(); clearInterval(timerI); timerI=setInterval(()=>{const t=$('#tm'); if(t&&aa&&!aa.over) t.textContent=((Date.now()-aa.roundStart)/1000).toFixed(1)+' s';},200); }
-let aaFocus=null;
-function aaDraw(){ const r=aa; view(`<div class=row><span class=big>Ash Archives · ${r.room<3?'Room '+(r.room+1)+'/3':'Keeper'} · Round ${r.roomRounds+1}</span>&nbsp;<span class=big id=tm>0.0 s</span></div>
- <div>${r.role}${r.role!==st.c.role?' (test role)':''} · Core-style L${r.L} · HP ${Math.max(0,Math.round(r.hp))}/${Math.round(r.mx)} · Tonics ${r.pots}/3${r.sil?' · SILENCED':''}${r.assist?' · assist -25%':''}</div>
- <div class=tip>${r.over?(r.result==='clear'?'Run cleared (+50 XP).':'Run failed. After 2 fails today: assist mode.'):'Tap an enemy card to focus it, then Attack ('+(AA.KIT[r.role].aoe>1?'hits '+AA.KIT[r.role].aoe+' targets':'single target')+'). Tonics are free (+50% HP).'}</div>
- <div>${r.ens.map((e,i)=>`<div class="card ${aaFocus===i?'sel':''}" onclick="aaFocus=${i};aaDraw()"><b>${e.k}</b>${e.keeper?' 👑':''}<br>${Math.round(e.hp)}/${Math.round(e.mx)}</div>`).join('')}</div>
- <div class=row>${r.over?'<button onclick="aaStart()">New run</button><button class=s onclick="aaLeave()">Back to day</button>':'<button onclick="aaAct()">Attack</button><button class=s onclick="AA.tonic(aa);aaDraw()">Ash Tonic</button><button class=s onclick="aaLeave()">Leave</button>'}</div>
- <div class=log>${r.log.slice(-6).join('\n')}</div><button class=s onclick="exportAA()">Export AA log (CSV)</button>`); }
-function aaAct(){ AA.act(aa,'attack',aaFocus); aaFocus=null; const lr=aa.roundLog[aa.roundLog.length-1]; (st.aaRounds=st.aaRounds||[]).push({...lr,role:aa.role,level:aa.L,t:new Date().toISOString()});
- if(aa.over){ (st.aaRuns=st.aaRuns||[]).push({t:new Date().toISOString(),role:aa.role,level:aa.L,result:aa.result,rounds:aa.rounds,room:aa.room,assist:aa.assist}); if(aa.result==='clear'){ st.c.xpToday+=50; } else st.aaFails=(st.aaFails||0)+1; log(['Ash Archives ('+aa.role+'): '+aa.result+' in '+aa.rounds+' rounds']); }
- save(); aaDraw(); }
-function aaLeave(){ clearInterval(timerI); aa=null; day(); }
-function exportAA(){ const rows=(st.aaRuns||[]).map(r=>['run',r.t,r.role,r.level,r.result,r.rounds,r.room,r.assist].join(',')).concat((st.aaRounds||[]).map(r=>['round',r.t,r.role,r.level,r.room,r.round,r.sec].join(',')));
- const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['type,t,role,level,result/room,rounds/round,room/sec,assist\n'+rows.join('\n')],{type:'text/csv'})); a.download='aa_log.csv'; a.click(); }
 // ---------- Nascent ----------
 function nasStart(){ G=st.nas?Object.assign(NAS.newGame(),st.nas,{rng:Math.random}):NAS.newGame(); if(NAS.active(G)!==0) NAS.endTurn(G); nasDraw(); }
 let nSel=null;
