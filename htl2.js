@@ -16,20 +16,20 @@ const UNITS={Disciple:{cost:15,hp:.35,dmg:.25,rng:22,spd:55,col:'#4c4'},Archer:{
 const TUR={Sunspire:{cost:40,dmg:.6,rng:320,rate:1.5},Gale:{cost:40,dmg:.25,rng:220,rate:2,aoe:1},Snare:{cost:35,dmg:.1,rng:260,rate:2,slow:.5},
   Repulsor:{cost:35,dmg:.15,rng:200,rate:4,push:60},Lantern:{cost:35,heal:.04,rng:300,rate:2},Bastion:{cost:30,wall:6},Well:{cost:30,income:1.5}};
 const G=(L,R)=>(1000+60*(L-1))*Math.pow(10,R), E=(L,R)=>(120+10*L)*Math.pow(10,R);
-function hero(role,L,R){ const [a,b,c,d]=PL[role], t=(L-1)/9; return {hp:(a+(c-a)*t)*Math.pow(10,R), dpt:(b+(d-b)*t)*KIT[role]*Math.pow(10,R)}; }
+function hero(role,L,R){ const [a,b,c,d]=PL[role], t=(L-1)/9; const bf=R<=1?1.25:1; return {hp:bf*(a+(c-a)*t)*Math.pow(10,R), dpt:bf*(b+(d-b)*t)*KIT[role]*Math.pow(10,R)}; }
 // wave budget: locked B(L)=18,000+1,500(L-1) at wave 1, then +35% per wave and x1.08 per level so the Collective eventually overwhelms
-const budget=(L,R,wave)=>(18000+1500*(L-1))*Math.pow(1.08,L-1)*(1+0.35*(wave-1))*Math.pow(10,R);
+const budget=(L,R,wave)=>Math.min(1,.55+.1*(L-1))*(18000+1500*(L-1))*Math.pow(1.13,L-1)*Math.pow(1.32,wave-1)*Math.pow(10,R);
 function newGame(role,L,R,opt={}){ const h=hero(role,L,R);
   return {role,L,R:R||0,wave:0,t:0,gateMax:2000*Math.pow(10,R||0)*(1+.05*(L-1)),gate:0,credit:40,earned:0,spent:0,bought:{},
     hero:{x:120,hp:h.hp,mx:h.hp,dpt:h.dpt,cd:0,ko:0,move:0,t1:0,t2:0},foes:[],allies:[],slots:[null,null,null],wall:0,fx:[],log:[],rng:opt.rng||Math.random,over:false}; }
-function startWave(g){ g.wave++; g.t=0; g.kills=0; g.waveCredit0=g.earned; g.waveSpent0=g.spent; g.boughtW={}; g.gate=g.wave===1?g.gateMax:g.gate;
+function startWave(g){ g.wave++; g.t=0; g.kills=0; g.waveCredit0=g.earned; g.waveSpent0=g.spent; g.boughtW={}; g.gate=g.wave===1?g.gateMax:Math.min(g.gateMax,g.gate+.25*g.gateMax);
   const r=g.rng, pool=Object.keys(EN).filter(k=>!EN[k].boss&&(EN[k].lv||1)<=g.L); let B=budget(g.L,g.R,g.wave), q=[];
   if(g.wave%3===0||r()<2/15){ q.push('Hammerov'); B-=EN.Hammerov.hp*G(g.L,g.R); }
   while(B>0.3*G(g.L,g.R)){ const k=pool[Math.floor(r()*pool.length)]; q.push(k); B-=EN[k].hp*G(g.L,g.R); }
   const spread=Math.min(55,20+q.length*1.6); g.queue=q.map((k,i)=>({k,at:spread*i/q.length+r()*2})).sort((a,b)=>a.at-b.at); g.waveOver=false; g.result=null; }
 function buy(g,k){ const u=UNITS[k]; if(u.realm&&g.R<u.realm) return 'General unlocks at Core (age up)'; if(g.credit<u.cost) return 'Need '+u.cost+' credit';
   g.credit-=u.cost; g.spent+=u.cost; g.boughtW[k]=(g.boughtW[k]||0)+1; g.bought[k]=(g.bought[k]||0)+1;
-  g.allies.push({k,x:GATE_X+10,hp:u.hp*g.hero.mx,mx:u.hp*g.hero.mx,cd:0}); return k+' joins the line'; }
+  g.allies.push({k,x:GATE_X+10,hp:1.25*u.hp*g.hero.mx,mx:1.25*u.hp*g.hero.mx,cd:0}); return k+' joins the line'; }
 function build(g,slot,k){ if(g.slots[slot]) return 'Slot taken'; const t=TUR[k]; if(g.credit<t.cost) return 'Need '+t.cost+' credit';
   g.credit-=t.cost; g.spent+=t.cost; g.slots[slot]={k,cd:0}; if(k==='Bastion') g.wall=t.wall*E(g.L,g.R)*3; return k+' built'; }
 function tech(g,n){ const h=g.hero; if(h.ko) return 'Knocked out'; if(n===1){ if(h.t1>0) return 'Cooling down'; h.t1=10; // Burst: 3x dmg to all in range
@@ -49,7 +49,7 @@ function step(g,dt){ if(g.waveOver) return; g.t+=dt; const h=g.hero, L=g.L, R=g.
   for(const a of g.allies){ const u=UNITS[a.k]; a.cd-=dt; const tg=g.foes.filter(f=>f.x>=a.x-5&&f.x-a.x<=u.rng).sort((x,y)=>x.x-y.x)[0];
     const gen=g.allies.some(b=>b.k==='General'&&Math.abs(b.x-a.x)<150)?1.2:1;
     if(u.heal&&a.cd<=0){ const w=[h,...g.allies].filter(b=>b.hp<b.mx&&Math.abs(b.x-a.x)<=u.rng&&!(b===h&&h.ko>0)).sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0]; if(w){ w.hp=Math.min(w.mx,w.hp+u.heal*h.mx); a.cd=TURN; } }
-    if(tg){ if(a.cd<=0&&!u.heal){ dmg(g,tg,u.dmg*h.dpt*gen); a.cd=TURN; } else if(u.heal&&a.cd<=0){ dmg(g,tg,u.dmg*h.dpt); a.cd=TURN; } }
+    if(tg){ if(a.cd<=0&&!u.heal){ dmg(g,tg,1.25*u.dmg*h.dpt*gen); a.cd=TURN; } else if(u.heal&&a.cd<=0){ dmg(g,tg,u.dmg*h.dpt); a.cd=TURN; } }
     if(u.back){ // back line: hold behind frontmost melee ally (or hero), never lead; pass freely through hero
       const mel=g.allies.filter(b=>!UNITS[b.k].back).map(b=>b.x); const anc=mel.length?Math.max(...mel):(h.ko>0?GATE_X+60:h.x);
       const want=Math.max(GATE_X+10,anc-u.back), d=want-a.x; if(Math.abs(d)>2) a.x+=Math.sign(d)*Math.min(Math.abs(d),u.spd*dt); }
