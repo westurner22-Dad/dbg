@@ -24,6 +24,13 @@ const TECH={
  'Gravity Well':{tier:1.5,lv:6,tg:'all',pw:.5,slow:1,d:'Hit all enemies 0.5x and slow them'}};
 const KIT={Body:['Kick','Combat Insight','Flow Like Water','Focus Breathing'],Light:['Light Bolt','Radiant Guard','Healing Light','Purifying Flash','Focus Breathing'],
  Force:['Force Punch','Shock Dash','Momentum Strike','Afterimage Stance','Focus Breathing'],Mass:['Gravity Crush','Stone Skin','Earthen Renewal','Gravity Well','Focus Breathing']};
+// Technique library (character sheet). 2 permanent starters per path; others bought as manuals (affinity manual 150g, cultivation_07) or developed later (stub).
+const STARTERS={Body:['Kick','Combat Insight'],Force:['Force Punch','Shock Dash'],Light:['Light Bolt','Healing Light'],Mass:['Gravity Crush','Stone Skin']};
+const MANUAL_COST=150;
+function sheet(q,path){ q.techs=q.techs||{}; STARTERS[path].forEach(t=>{ if(!q.techs[t]) q.techs[t]={lv:1,starter:1}; });
+  if(!Array.isArray(q.slots)) q.slots=STARTERS[path].slice(); q.slots=q.slots.filter(t=>q.techs[t]).slice(0,3); return q; }
+function learn(q,path,t){ sheet(q,path); if(q.techs[t]) return false; q.techs[t]={lv:1}; if(q.slots.length<3) q.slots.push(t); return true; }
+function shopTechs(path){ return KIT[path].filter(t=>t!=='Focus Breathing'&&!STARTERS[path].includes(t)); }
 const ITEMS={'Healing Potion':{cost:25,d:'Restore 50% max HP'},'Focus Crystal':{cost:25,d:'Restore 30% max mana'}};
 const ENEMY=[['Red Guard','Body','💂'],['Iron Commissar','Force','👺'],['Propaganda Monk','Light','📢'],['Hex Clerk','Mass','🧾'],['Tractor Brute','Force','🚜']];
 const TERR=[{n:'Ironleaf Valley',lv:1},{n:'Rustwater Ford',lv:3},{n:'Red Banner Hills',lv:5},{n:'Commissar Peaks',lv:7},{n:'Black Bell Capital',lv:9}];
@@ -32,12 +39,12 @@ function unit(name,path,L,side,o={}){ const p=PATHS[path], g=o.gear||0, f=side==
   return {id:++uid,name,path,side,L,em:o.em||p.em,leader:!!o.boss,hp,mx:hp,mp,mmp:mp,atk:Math.round(80*p.atk*sc(L)*(1+g)*(L>=5&&path==='Body'?1.06:1)),mat:Math.round(80*p.mat*sc(L)*(1+g)),
    spd:p.spd+(side==='E'?0:1),techs:side==='P'?KIT[path].filter(t=>TECH[t].lv<=L):[],cd:{},shield:0,dr:0,regen:0,dodge:0,dodge25:0,crit:0,slow:0}; }
 const cost=(u,t)=>Math.round(TECH[t].tier*.1*u.mmp);
-function squad(role,L,gear){ const me=ROLE2PATH[role]||'Body', rest=['Body','Force','Light','Mass'].filter(x=>x!==me);
-  const nm={Body:'Tiezhu',Force:'Shanmei',Light:'Lumen',Mass:'Zhong'}; return [unit('You',me,L,'P',{gear})].concat(rest.map(p=>unit(nm[p],p,L,'P'))); }
+function squad(role,L,gear,slots){ const me=ROLE2PATH[role]||'Body', rest=['Body','Force','Light','Mass'].filter(x=>x!==me);
+  const nm={Body:'Tiezhu',Force:'Shanmei',Light:'Lumen',Mass:'Zhong'}; return [Object.assign(unit('You',me,L,'P',{gear}),slots?{techs:slots.concat('Focus Breathing')}:{})].concat(rest.map(p=>unit(nm[p],p,L,'P'))); }
 function enemies(t,b,rng){ const T=TERR[t], L=T.lv+Math.floor(b/2), n=3+Math.min(2,Math.floor((t+b)/2)), out=[];
   out.push(unit('Commissar '+['Wu','Lei','Kang','Mao','Zhen'][t],'Force',L+1,'E',{boss:1,em:'🎖️',t}));
   for(let i=1;i<n;i++){ const [nm,p,em]=ENEMY[Math.floor(rng()*ENEMY.length)]; out.push(unit(nm,p,L,'E',{em,t})); } return out; }
-function newBattle(o){ const rng=o.rng||Math.random; return {t:o.terr,bi:o.battle,L:o.L,P:squad(o.role,o.L,o.gear),E:enemies(o.terr,o.battle,rng),rng,round:0,phase:'cmd',q:[],over:false,result:null,used:[],items:Object.assign({},o.items||{}),last:null}; }
+function newBattle(o){ const rng=o.rng||Math.random; return {t:o.terr,bi:o.battle,L:o.L,P:squad(o.role,o.L,o.gear,o.slots),E:enemies(o.terr,o.battle,rng),rng,round:0,phase:'cmd',q:[],over:false,result:null,used:[],items:Object.assign({},o.items||{}),last:null}; }
 const alive=a=>a.filter(u=>u.hp>0);
 function all(b){ return b.P.concat(b.E); }
 const byId=(b,id)=>all(b).find(u=>u.id===id);
@@ -98,5 +105,5 @@ function ai(b){ // sensible player AI: heal <45% (Light) or potion <30%, Focus B
     else if(u.path==='Body'&&!u.crit&&can('Combat Insight')&&b.round%2===1) cmds[u.id]={k:'tech',t:'Combat Insight',tgt:u.id};
     else cmds[u.id]={k:'fight',tgt:weak.id}; }
   return cmds; }
-root.FF={PATHS,ROLE2PATH,TECH,KIT,ITEMS,TERR,newBattle,startRound,act,loot,ai,alive,cost,byId};
+root.FF={STARTERS,MANUAL_COST,sheet,learn,shopTechs,PATHS,ROLE2PATH,TECH,KIT,ITEMS,TERR,newBattle,startRound,act,loot,ai,alive,cost,byId};
 })(typeof window!=='undefined'?window:module.exports);

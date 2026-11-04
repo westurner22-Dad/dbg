@@ -152,18 +152,38 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden&&hg) hLast
 // ================= Sect Conquest v2: FF2-style turn-based squad battles =================
 let fb=null, fCi=0, fCmds={}, fMode=null, fPend=null, fMsg='', fTimer=0, fT0=0;
 function qiState(){ const c=st.c; st.qi=st.qi||{}; const q=st.qi; q.prog=q.prog||[0,0,0,0,0]; q.gold=q.gold||0; q.inv=q.inv||[]; q.log=q.log||[]; q.bag=q.bag||{'Healing Potion':2,'Focus Crystal':1};
- if(q.day!==c.day){ q.day=c.day; q.wins=0; } return q; }
+ if(q.day!==c.day){ q.day=c.day; q.wins=0; } FF.sheet(q,FF.ROLE2PATH[c.role]||'Body'); return q; }
 function qiHome(){ const q=qiState(), c=st.c, me=FF.ROLE2PATH[c.role]||'Body', ps=[me].concat(['Body','Force','Light','Mass'].filter(p=>p!==me));
  view(`<div class=big>Sect Conquest · Qi ${c.level}</div><div class=tip>${fMsg||'Pick a battle. 3 wins conquers a territory. First 2 wins today give +50 XP each; after that, wins still drop gold, gear and treasures.'} Wins today: ${q.wins||0}</div>
- <div class=tip>Squad: ${ps.map((p,i)=>`${FF.PATHS[p].em} <b>${i?p:'You ('+p+')'}</b>: ${FF.KIT[p].filter(t=>FF.TECH[t].lv<=c.level).join(', ')}`).join('<br>')}</div>
+ <div class=tip>Squad: ${ps.map((p,i)=>`${FF.PATHS[p].em} <b>${i?p:'You ('+p+')'}</b>: ${i?FF.KIT[p].filter(t=>FF.TECH[t].lv<=c.level).join(', '):'Attack, '+(q.slots.join(', ')||'—')+' (loadout: Explore → B or ⛩️)'}`).join('<br>')}</div>
  <h3>Territories</h3>${FF.TERR.map((t,i)=>`<button style="width:100%;text-align:left" onclick="qiFight(${i})">${q.prog[i]>=3?'✅ ':''}${t.n} · enemy Qi ~${t.lv} · ${Math.min(3,q.prog[i])}/3${q.prog[i]>=3?' (conquered: replay for loot)':''}</button>`).join('')}
  <h3>${q.gold} gold · bag: ${Object.keys(FF.ITEMS).map(k=>k+' ×'+(q.bag[k]||0)).join(', ')}</h3><div class=row>${Object.keys(FF.ITEMS).map(k=>`<button class=s onclick="qiBuy('${k}')">Buy ${k} (${FF.ITEMS[k].cost}g)</button>`).join('')}</div>
+ <h3>Technique manuals (${me} path, ${FF.MANUAL_COST}g)</h3><div class=row>${FF.shopTechs(me).map(t=>q.techs[t]?`<button class=s disabled>${t} ✓</button>`:`<button class=s onclick="qiManual('${t}')">${t} · Qi ${FF.TECH[t].lv}+</button>`).join('')}</div>
  <h3>Inventory${q.gear?' · equipped '+q.gear.n:''}</h3>${q.inv.length?q.inv.map((it,i)=>`<div class=row>${it.n} (${it.val}g) <button class=s onclick="qiSell(${i})">Sell</button>${it.k==='gear'?`<button class=s onclick="qiEquip(${i})">Equip</button>`:''}</div>`).join(''):'<div>Empty</div>'}
  <div class=row><button class=s onclick="qiExport()">Export battle log (CSV)</button><button class=s onclick="fMsg='';day()">Back to day</button></div>`); }
 function qiSell(i){ const q=qiState(), it=q.inv.splice(i,1)[0]; q.gold+=it.val; fMsg='Sold '+it.n+' for '+it.val+' gold.'; save(); qiHome(); }
 function qiEquip(i){ const q=qiState(), it=q.inv.splice(i,1)[0]; if(q.gear) q.inv.push(q.gear); q.gear=it; fMsg='Equipped '+it.n+' (+'+Math.round(it.bonus*100)+'% your HP/attack).'; save(); qiHome(); }
 function qiBuy(k){ const q=qiState(), c=FF.ITEMS[k].cost; if(q.gold<c) fMsg='Need '+c+' gold.'; else { q.gold-=c; q.bag[k]=(q.bag[k]||0)+1; fMsg='Bought '+k+'.'; } save(); qiHome(); }
-function qiFight(t){ const q=qiState(); fb=FF.newBattle({role:st.c.role,L:st.c.level,terr:t,battle:q.prog[t]%3,gear:q.gear?q.gear.bonus:0,items:q.bag}); fT0=performance.now(); fCmds={}; fCi=0; fMode=null; fMsg='';
+function qiManual(t){ const q=qiState(), c=st.c, me=FF.ROLE2PATH[c.role]||'Body'; if(c.level<FF.TECH[t].lv) fMsg=t+' needs Qi '+FF.TECH[t].lv+'.'; else if(q.gold<FF.MANUAL_COST) fMsg='Need '+FF.MANUAL_COST+' gold.'; else { q.gold-=FF.MANUAL_COST; FF.learn(q,me,t); fMsg='Learned '+t+(q.slots.includes(t)?' (slotted).':'. It is on your sheet; slot it from Explore → B or the shrine.'); } save(); qiHome(); }
+// Loadout: character sheet keeps every technique; 3 slots (+Attack always). Outside battle only.
+let lo={cur:0,from:'',msg:''};
+function loOpen(from){ lo={cur:0,from,msg:''}; loDraw(); }
+function loList(){ const q=qiState(); return Object.keys(q.techs); }
+function loDraw(){ const q=qiState(), ts=loList(); lo.cur=Math.max(0,Math.min(lo.cur,ts.length)); const row=(i,t)=>{ const T=FF.TECH[t], on=q.slots.includes(t);
+  return `<div class="pki lorow ${i===lo.cur?'on':''}" data-i=${i} style="display:block;padding:8px;border-bottom:1px solid #ccc">${i===lo.cur?'▶':'&nbsp;'} ${on?'★':'☆'} ${t} <small>Lv${q.techs[t].lv}${q.techs[t].starter?' · starter':''} · ${api_mt(t)} · ${T.d}</small></div>`; };
+ view(`<div class=big>${lo.from==='shrine'?'⛩️ Shrine · ':''}Technique Loadout</div><div class=tip>${lo.msg||'★ = slotted (3 max). Attack is always your 4th move. A/tap toggles, B/Done exits.'} Slots: Attack, ${q.slots.join(', ')||'—'}</div>
+ <div id=lol style="background:#fff;color:#000;border-radius:6px;font:15px monospace">${ts.map((t,i)=>row(i,t)).join('')}<div class="pki lorow ${lo.cur===ts.length?'on':''}" data-i=${ts.length} style="display:block;padding:8px">${lo.cur===ts.length?'▶':'&nbsp;'} DONE</div></div>
+ <div class=wpad><div class=dpad>${['up','left','right','down'].map(d=>`<button class="dp dp-${d}" data-d=${d}>${{up:'▲',down:'▼',left:'◀',right:'▶'}[d]}</button>`).join('')}</div><div class=ab><button class=wb id=loB>B</button><button class=wb id=wA>A</button></div></div>`);
+ document.querySelectorAll('.lorow').forEach(x=>x.addEventListener('pointerdown',e=>{ e.preventDefault(); lo.cur=+x.dataset.i; loA(); }));
+ document.querySelectorAll('.dp').forEach(x=>x.addEventListener('pointerdown',e=>{ e.preventDefault(); loPad(x.dataset.d); }));
+ $('#wA').addEventListener('pointerdown',e=>{ e.preventDefault(); loA(); }); $('#loB').addEventListener('pointerdown',e=>{ e.preventDefault(); loExit(); }); }
+const api_mt=t=>PK.MOVE_TYPE(t);
+function loPad(d){ if(d==='up') lo.cur--; if(d==='down') lo.cur++; loDraw(); }
+function loA(){ const q=qiState(), ts=loList(); if(lo.cur>=ts.length) return loExit(); const t=ts[lo.cur], i=q.slots.indexOf(t);
+ if(i>=0){ q.slots.splice(i,1); lo.msg='Unslotted '+t+'.'; } else if(q.slots.length>=3) lo.msg='All 3 slots full. Unslot one first.'; else { q.slots.push(t); lo.msg='Slotted '+t+'.'; } save(); loDraw(); }
+function loExit(){ lo.from=''; worldOpen(); }
+document.addEventListener('keydown',e=>{ if(!$('#lol')) return; const k={ArrowUp:'up',ArrowDown:'down'}[e.key]; if(k){ e.preventDefault(); loPad(k); } if(e.key==='z'||e.key==='Z') loA(); if(e.key==='x'||e.key==='X') loExit(); });
+function qiFight(t){ const q=qiState(); fb=FF.newBattle({role:st.c.role,L:st.c.level,terr:t,battle:q.prog[t]%3,gear:q.gear?q.gear.bonus:0,items:q.bag,slots:q.slots}); fT0=performance.now(); fCmds={}; fCi=0; fMode=null; fMsg='';
  view(`<div id=fs class=fs></div><div class=fbx><div class=fb1 id=fen></div><div class=fb2 id=fcm></div></div><div class=fb3 id=fst></div><div class=fline id=fl></div>`); fRender(); fCmdUI(); }
 const fActive=()=>FF.alive(fb.P)[fCi];
 function fSprite(u,i,n){ const sel=fMode&&fMode.tg&&((fMode.tg==='foe')===(u.side==='E'))&&u.hp>0;
@@ -206,11 +226,11 @@ function qiExport(){ const cols=['t','territory','level','enemies','rounds','use
  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='qi_battle_log.csv'; a.click(); }
 // ================= Explore (Overworld) demo =================
 let wMsg='';
-function worldOpen(){ st.world=st.world||{}; view(`<div class=row><span class=big>Explore · Sect Town</span>&nbsp;<button class=s onclick="World.stop();save();day()">✕ Leave</button></div><div id=wv></div><div class=tip>D-pad to walk (hold), A to talk / pray at ⛩️, B for menu. Tall grass hides Collective scouts. Desktop: arrows + Z/X.</div>`);
- World.open($('#wv'),st.world,{save:s=>{ st.world=s; save(); },battle:worldBattle,talk:id=>null /* hook: BoG cameos & side-story chat during polish */,msg:wMsg}); wMsg=''; }
+function worldOpen(){ st.world=st.world||{}; view(`<div class=row><span class=big>Explore · Sect Town</span>&nbsp;<button class=s onclick="World.stop();save();day()">✕ Leave</button></div><div id=wv></div><div class=tip>D-pad to walk (hold), A to talk / pray at ⛩️, B for technique loadout. Tall grass hides Collective scouts. Desktop: arrows + Z/X.</div>`);
+ World.open($('#wv'),st.world,{save:s=>{ st.world=s; save(); },battle:worldBattle,menu:from=>loOpen(from),talk:id=>null /* hook: BoG cameos & side-story chat during polish */,msg:wMsg}); wMsg=''; }
 function worldBattle(kind,npcId){ const q=qiState(), c=st.c, s=st.world, path=FF.ROLE2PATH[c.role]||'Body', pk=s.pk||[1,1];
  view(`<div id=pkv></div>`);
- PK.start($('#pkv'),{name:c.name||'You',path,L:c.level,trainer:kind==='trainer',hpFrac:pk[0]>0?pk[0]:1,mpFrac:pk[1],bag:q.bag,gear:q.gear?q.gear.bonus:0},b=>{
+ PK.start($('#pkv'),{name:c.name||'You',path,L:c.level,trainer:kind==='trainer',hpFrac:pk[0]>0?pk[0]:1,mpFrac:pk[1],bag:q.bag,gear:q.gear?q.gear.bonus:0,slots:q.slots},b=>{
   q.bag=Object.assign({},b.bag); s.pk=[b.me.hp/b.me.mx,b.me.mp/b.me.mmp]; const lines=[];
   if(b.result==='win'){ const xp=Math.max(0,Math.min(40,DBG.XP_GOAL-c.xpToday)), gold=b.trainer?8+Math.floor(Math.random()*5):2+Math.floor(Math.random()*3);
    c.xpToday+=xp; q.gold+=gold; lines.push(xp?`${c.name||'You'} gained ${xp} XP!`:'Daily XP goal already met.'); lines.push(`Got ${gold} gold!`);

@@ -45,9 +45,9 @@ function face(){ const [dx,dy]=DIRS[w.dir]; return [w.x+dx,w.y+dy]; }
 function A(){ if(txt) return closeTxt(); if(busy||mv) return; const [fx,fy]=face(), n=npcAt(w,fx,fy);
   if(n){ const back={up:'down',down:'up',left:'right',right:'left'}[w.dir]; w.npc[n.id].dir=back; const custom=hooks.talk&&hooks.talk(n.id);
     if(n.trainer&&!w.beaten[n.id]) return trainerFight(n); return say(custom||(n.trainer?n.after:n.line)); }
-  if(tile(fx,fy)==='R'||tile(w.x,w.y)==='R') { w.hp=null; w.pk=null; save(); return say('You pray at the shrine. Your cultivator is fully restored!'); }
+  if(tile(fx,fy)==='R'||tile(w.x,w.y)==='R') { w.hp=null; w.pk=null; save(); return say('You pray at the shrine. Your cultivator is fully restored!',()=>hooks.menu&&(stop(),hooks.menu('shrine'))); }
   if(tile(fx,fy)==='D') return say('The door is locked. (Interiors come later.)'); }
-function B(){ if(txt) return closeTxt(); if(busy||mv) return; say('Menu: A to keep exploring.  Progress saves automatically. (Leave with the ✕ button.)'); }
+function B(){ if(txt) return closeTxt(); if(busy||mv) return; if(hooks.menu){ stop(); return hooks.menu('menu'); } say('Menu: A to keep exploring.  Progress saves automatically. (Leave with the ✕ button.)'); }
 function step(){ if(mv||txt||busy||!held) return; const d=held; const [dx,dy]=DIRS[d];
   if(w.dir!==d){ w.dir=d; if(!mv){ mv={fx:w.x,fy:w.y,t:0,dur:.06,turn:1}; } return; }
   let nx=w.x+dx, ny=w.y+dy; if(!passable(w,nx,ny,dy)) return;

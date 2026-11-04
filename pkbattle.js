@@ -12,11 +12,11 @@ const BEASTS=[
  {n:'Iron Ape',em:'🦍',ty:'Body',hp:1.15,atk:1.0,spd:9,mv:'Iron Fist'}];
 const TRAINER_BEAST={n:'Red Banner Wolf',em:'🐺',ty:'Force',hp:1.08,atk:1.13,spd:11,mv:'Banner Howl'};
 const MOVE_TYPE=t=>FF.KIT.Light.includes(t)?'Light':FF.KIT.Force.includes(t)?'Force':FF.KIT.Mass.includes(t)?'Mass':'Body';
-const PB={Body:{hp:.83,dm:.83},Force:{hp:.9,dm:.9},Light:{hp:1.2,dm:1.2},Mass:{hp:1.3,dm:1.3}};
-function moves(path,L){ return ['Attack'].concat(FF.KIT[path].filter(t=>t!=='Focus Breathing'&&FF.TECH[t].lv<=L).slice(0,3)); }
+const PB={Body:{hp:.85,dm:.85},Force:{hp:.9,dm:.9},Light:{hp:1.18,dm:1.18},Mass:{hp:1.28,dm:1.28}};
+function moves(path,L,slots){ return ['Attack'].concat((slots||FF.STARTERS[path]).filter(t=>FF.TECH[t]).slice(0,3)); } // Attack + up to 3 slotted
 function newBattle(o){ const p=FF.PATHS[o.path], L=o.L, rng=o.rng||Math.random;
   const me={name:o.name||'You',path:o.path,em:p.em,L,mx:Math.round(PB[o.path].hp*300*Math.max(1.05,p.hp)*1.45*sc(L)*(1+(o.gear||0))),mmp:Math.round(100*p.mp*sc(L)),atk:Math.round(80*p.atk*sc(L)*(1+(o.gear||0))),mat:Math.round(80*p.mat*sc(L)*(1+(o.gear||0))),spd:p.spd+1,shield:0,dr:0,crit:0,dodge:0};
-  me.hp=Math.max(1,Math.round((o.hpFrac??1)*me.mx)); me.mp=Math.round((o.mpFrac??1)*me.mmp); me.moves=moves(o.path,L);
+  me.hp=Math.max(1,Math.round((o.hpFrac??1)*me.mx)); me.mp=Math.round((o.mpFrac??1)*me.mmp); me.moves=moves(o.path,L,o.slots);
   const B=o.trainer?TRAINER_BEAST:BEASTS[Math.floor(rng()*BEASTS.length)], bl=Math.max(1,L+(o.trainer?1:Math.floor(rng()*3)-1));
   const foe={name:B.n,em:B.em,ty:B.ty,L:bl,mx:Math.round(420*B.hp*sc(bl)*(.98+.008*(L-1))),atk:Math.round(54*B.atk*sc(bl)*(.98+.008*(L-1))),spd:B.spd,mv:B.mv,slow:0}; foe.hp=foe.mx;
   return {me,foe,rng,turn:0,over:false,result:null,runs:0,bag:Object.assign({},o.bag||{}),trainer:!!o.trainer}; }
