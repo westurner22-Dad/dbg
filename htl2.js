@@ -10,8 +10,8 @@ const EN={Conscript:{hp:1,hit:1,spd:45,cr:4,rng:20,col:'#c33'},Brigadier:{hp:.6,
   Tractor:{hp:3,hit:1.5,spd:25,cr:10,rng:25,col:'#777',dr:.4,lv:6},Loudspeaker:{hp:1.5,hit:.5,spd:45,cr:8,rng:20,col:'#fc3',lv:8,aura:1},
   Hammerov:{hp:6,hit:3,spd:35,cr:30,rng:30,col:'#900',boss:1}};
 // support units (Sect Credit): hp x hero maxHP, dmg x hero dmg/turn
-const UNITS={Disciple:{cost:15,hp:.35,dmg:.25,rng:22,spd:55,col:'#4c4'},Archer:{cost:25,hp:.2,dmg:.3,rng:170,spd:50,col:'#4cf'},
-  Healer:{cost:30,hp:.25,dmg:.05,rng:120,spd:45,heal:.06,col:'#fff'},General:{cost:120,hp:1.2,dmg:.8,rng:28,spd:40,aura:.2,col:'#fd0',realm:1}};
+const UNITS={Disciple:{cost:15,hp:.35,dmg:.25,rng:22,spd:55,col:'#4c4'},Archer:{cost:25,hp:.2,dmg:.3,rng:170,spd:50,col:'#4cf',back:45},
+  Healer:{cost:30,hp:.25,dmg:.05,rng:120,spd:45,heal:.06,col:'#fff',back:75},General:{cost:120,hp:1.2,dmg:.8,rng:28,spd:40,aura:.2,col:'#fd0',realm:1}};
 // gate turret slots (Sect Credit — one currency, simplest)
 const TUR={Sunspire:{cost:40,dmg:.6,rng:320,rate:1.5},Gale:{cost:40,dmg:.25,rng:220,rate:2,aoe:1},Snare:{cost:35,dmg:.1,rng:260,rate:2,slow:.5},
   Repulsor:{cost:35,dmg:.15,rng:200,rate:4,push:60},Lantern:{cost:35,heal:.04,rng:300,rate:2},Bastion:{cost:30,wall:6},Well:{cost:30,income:1.5}};
@@ -50,7 +50,10 @@ function step(g,dt){ if(g.waveOver) return; g.t+=dt; const h=g.hero, L=g.L, R=g.
     const gen=g.allies.some(b=>b.k==='General'&&Math.abs(b.x-a.x)<150)?1.2:1;
     if(u.heal&&a.cd<=0){ const w=[h,...g.allies].filter(b=>b.hp<b.mx&&Math.abs(b.x-a.x)<=u.rng&&!(b===h&&h.ko>0)).sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0]; if(w){ w.hp=Math.min(w.mx,w.hp+u.heal*h.mx); a.cd=TURN; } }
     if(tg){ if(a.cd<=0&&!u.heal){ dmg(g,tg,u.dmg*h.dpt*gen); a.cd=TURN; } else if(u.heal&&a.cd<=0){ dmg(g,tg,u.dmg*h.dpt); a.cd=TURN; } }
-    else { const blocker=g.foes.some(f=>f.x>a.x&&f.x-a.x<u.rng); if(!blocker) a.x=Math.min(LANE-40,a.x+u.spd*dt); } }
+    if(u.back){ // back line: hold behind frontmost melee ally (or hero), never lead; pass freely through hero
+      const mel=g.allies.filter(b=>!UNITS[b.k].back).map(b=>b.x); const anc=mel.length?Math.max(...mel):(h.ko>0?GATE_X+60:h.x);
+      const want=Math.max(GATE_X+10,anc-u.back), d=want-a.x; if(Math.abs(d)>2) a.x+=Math.sign(d)*Math.min(Math.abs(d),u.spd*dt); }
+    else if(!tg){ const blocker=g.foes.some(f=>f.x>a.x&&f.x-a.x<u.rng); if(!blocker) a.x=Math.min(LANE-40,a.x+u.spd*dt); } }
   // turrets
   g.slots.forEach(s=>{ if(!s) return; const t=TUR[s.k]; s.cd-=dt; if(t.income){ g.credit+=t.income*dt; g.earned+=t.income*dt; return; } if(!t.rate||s.cd>0) return;
     const inr=g.foes.filter(f=>f.x-GATE_X<=t.rng).sort((a,b)=>a.x-b.x); if(t.heal){ if(!h.ko) h.hp=Math.min(h.mx,h.hp+t.heal*h.mx); g.gate=Math.min(g.gateMax,g.gate+t.heal*g.gateMax*.25); s.cd=t.rate; return; }

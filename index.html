@@ -1,10 +1,10 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>DBG prototype</title><style>
 body{font-family:system-ui,sans-serif;margin:0 auto;background:#111;color:#eee;max-width:520px;padding:8px;padding-bottom:40px;-webkit-text-size-adjust:100%;overflow-x:hidden}
 @media(min-width:700px){body{max-width:760px}.c{font-size:13px}}@media(max-width:380px){button{font-size:14px;padding:8px}.c{font-size:9px}}
 .tip{background:#233;padding:6px;border-radius:6px;margin:4px 0;font-size:14px}.cov{box-shadow:inset 0 0 0 2px #39f}.reach{background-image:linear-gradient(rgba(45,221,85,.18),rgba(45,221,85,.18))}
 .card{display:inline-block;border:1px solid #555;border-radius:8px;padding:8px;margin:3px;min-width:120px;vertical-align:top}.card.sel{border-color:#fd0}.pc{display:flex;gap:8px;align-items:center;background:#1a1a2a;padding:8px;border-radius:8px}.pimg{width:72px;height:72px;border-radius:8px;background:#335;display:flex;align-items:center;justify-content:center;font-size:30px}
-#cv{width:100%;height:auto;background:#0d1520;border-radius:8px;touch-action:none}.hb{font-size:20px;padding:14px 10px;flex:1}.bar{display:flex;gap:4px;margin:3px 0}.bar button{flex:1;margin:0}
+html,body{touch-action:manipulation}button,select,#cv,.mv{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.mv{position:fixed;bottom:10px;width:30%;height:84px;font-size:26px;z-index:9;opacity:.92}#mvL{left:8px}#mvR{right:8px}.hpad{height:110px}#cv{width:100%;height:auto;background:#0d1520;border-radius:8px;touch-action:none}.hb{font-size:20px;padding:14px 10px;flex:1}.bar{display:flex;gap:4px;margin:3px 0}.bar button{flex:1;margin:0}
 .t{display:inline-block;width:23%;margin:1%;padding:4px;border-radius:6px;font-size:11px;background:#222;vertical-align:top;box-sizing:border-box}.t.o0{background:#164}.t.o1{background:#634}.t.o2{background:#446}.t.o3{background:#553}.t.at{outline:3px solid #fd0}.t.adj{outline:2px dashed #fd0}
 button{font-size:16px;padding:10px 12px;margin:3px;border-radius:8px;border:0;background:#2d5;color:#000}button.s{background:#555;color:#fff}
 input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-box;margin:2px 0}
@@ -124,16 +124,27 @@ function htl(){ const c=st.c; hg=HTL2.newGame(c.role,c.level,c.realmIdx||0); HTL
 function htlView(){ const U=HTL2.UNITS, T=HTL2.TUR;
  view(`<div class=row><span class=big>${HTL2.REALMS[hg.R]} ${hg.L} · Wave <span id=hw></span></span></div><div id=hs></div>
  <canvas id=cv width=1000 height=420></canvas><div class=tip id=hm></div>
- <div class=bar><button class=hb ontouchstart="hg.hero.move=-1" ontouchend="hg.hero.move=0" onmousedown="hg.hero.move=-1" onmouseup="hg.hero.move=0">◀ Back</button>
- <button class=hb id=t1 onclick="hMsg=HTL2.tech(hg,1)">Burst</button><button class=hb id=t2 onclick="hMsg=HTL2.tech(hg,2)">Rally</button>
- <button class=hb ontouchstart="hg.hero.move=1" ontouchend="hg.hero.move=0" onmousedown="hg.hero.move=1" onmouseup="hg.hero.move=0">Fwd ▶</button></div>
+ <div class=bar><button class=hb id=t1>Burst</button><button class=hb id=t2>Rally</button></div>
  <div class=bar>${Object.keys(U).map(k=>`<button class=hb onclick="hMsg=HTL2.buy(hg,'${k}')">${k}<br><small>${U[k].cost}${U[k].realm?' · Core+':''}</small></button>`).join('')}</div>
- <div class=bar id=slots></div>
+ <div class=bar id=slots></div><div class=bar id=pick style="flex-wrap:wrap"></div>
  <div class=row id=hctl></div>
- <button class=s onclick="exportWaves()">Export wave log (CSV)</button>`); htlHud(); }
+ <button class=s onclick="exportWaves()">Export wave log (CSV)</button><div class=hpad></div>
+ <button class="hb mv" id=mvL>◀ Back</button><button class="hb mv" id=mvR>Fwd ▶</button>`); hSlotKey=''; hPick=-1;
+ const hold=(id,v)=>{ const b=$('#'+id); b.addEventListener('pointerdown',e=>{e.preventDefault();hg.hero.move=v;try{b.setPointerCapture(e.pointerId)}catch(_){}});
+   ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,e=>{e.preventDefault();if(hg&&hg.hero.move===v)hg.hero.move=0;})); };
+ hold('mvL',-1); hold('mvR',1);
+ [['t1',1],['t2',2]].forEach(([id,n])=>$('#'+id).addEventListener('pointerdown',e=>{e.preventDefault();hMsg=HTL2.tech(hg,n);htlHud();}));
+ htlHud(); }
+let hSlotKey='', hPick=-1;
+function slotTap(i){ hPick=hPick===i?-1:i; hSlotKey=''; htlHud(); }
+function slotBuild(k){ hMsg=HTL2.build(hg,hPick,k); hPick=-1; hSlotKey=''; htlHud(); }
+function renderSlots(){ const g=hg, cr=Math.floor(g.credit), key=g.slots.map(s=>s?s.k:'-').join()+hPick+(hPick>=0?Object.values(HTL2.TUR).map(t=>cr>=t.cost).join():'');
+ if(key===hSlotKey) return; hSlotKey=key;
+ $('#slots').innerHTML=g.slots.map((sl,i)=>sl?`<button class=s style="flex:1">${sl.k}</button>`:`<button style="flex:1" onclick="slotTap(${i})">${hPick===i?'▼ ':''}Turret ${i+1}</button>`).join('');
+ $('#pick').innerHTML=(hPick>=0?Object.keys(HTL2.TUR).map(k=>`<button style="flex:1 0 30%" ${cr<HTL2.TUR[k].cost?'class=s':''} onclick="slotBuild('${k}')">${k}<br><small>${HTL2.TUR[k].cost}</small></button>`).join(''):''); }
 function htlHud(){ const g=hg, h=g.hero; $('#hw').textContent=g.wave; $('#hs').textContent=`Gate ${Math.round(g.gate)}/${Math.round(g.gateMax)}${g.wall>0?' · Bastion '+Math.round(g.wall):''} · Credit ${Math.floor(g.credit)} · HP ${Math.round(h.hp)}/${Math.round(h.mx)}${h.ko>0?' (KO)':''} · ${Math.round(g.t)} s · kills ${g.kills}`;
  $('#hm').textContent=hMsg; $('#t1').textContent=h.t1>0?'Burst '+Math.ceil(h.t1):'Burst'; $('#t2').textContent=h.t2>0?'Rally '+Math.ceil(h.t2):'Rally';
- $('#slots').innerHTML=g.slots.map((sl,i)=>sl?`<button class=s style="flex:1">${sl.k}</button>`:`<select onchange="hMsg=HTL2.build(hg,${i},this.value);htlHud()" style="flex:1;font-size:15px"><option>Turret slot ${i+1}…</option>${Object.keys(HTL2.TUR).map(k=>`<option value=${k}>${k} ${HTL2.TUR[k].cost}</option>`).join('')}</select>`).join('');
+ renderSlots();
  $('#hctl').innerHTML=g.waveOver?(`<b>${g.result==='clear'?'Wave cleared':'The Gate fell'}</b>&nbsp;`+(g.result==='clear'?'<button onclick="htlNext()">Next wave</button>':'<button onclick="htl()">Retry Watch</button>')+
    (st.c.level>=10&&(st.c.realmIdx||0)<2?'<button onclick="ageUp()">Age up ⇧</button>':'')+'<button class=s onclick="htlLeave()">Back to day</button>'):'<button class=s onclick="htlLeave()">Leave</button>'; }
 function htlLoop(now){ if(!hg||!$('#cv')) return; const dt=Math.min(.1,(now-hLast)/1000); hLast=now; const was=hg.waveOver; HTL2.step(hg,dt);
