@@ -5,6 +5,7 @@ body{font-family:system-ui,sans-serif;margin:0 auto;background:#111;color:#eee;m
 .tip{background:#233;padding:6px;border-radius:6px;margin:4px 0;font-size:14px}.cov{box-shadow:inset 0 0 0 2px #39f}.reach{background-image:linear-gradient(rgba(45,221,85,.18),rgba(45,221,85,.18))}
 .card{display:inline-block;border:1px solid #555;border-radius:8px;padding:8px;margin:3px;min-width:120px;vertical-align:top}.card.sel{border-color:#fd0}.pc{display:flex;gap:8px;align-items:center;background:#1a1a2a;padding:8px;border-radius:8px}.pimg{width:72px;height:72px;border-radius:8px;background:#335;display:flex;align-items:center;justify-content:center;font-size:30px}
 html,body{touch-action:manipulation}button,select,#cv,.mv{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.mv{position:fixed;bottom:10px;width:30%;height:84px;font-size:26px;z-index:9;opacity:.92}#mvL{left:8px}#mvR{right:8px}.hpad{height:110px}#cv{width:100%;height:auto;background:#0d1520;border-radius:8px;touch-action:none}.hb{font-size:20px;padding:14px 10px;flex:1}.bar{display:flex;gap:4px;margin:3px 0}.bar button{flex:1;margin:0}
+.sq{display:flex;gap:6px}.pan{flex:1;border-radius:8px;padding:4px;display:flex;gap:4px}.pan.P{background:#123a66}.pan.E{background:#5a1717;flex-direction:row-reverse}.col{flex:1;display:flex;flex-direction:column;gap:4px}.tok{border-radius:6px;padding:4px 2px;text-align:center;font-size:12px;color:#000;min-height:52px;position:relative}.tok.dead{opacity:.25}.tok b{font-size:20px;display:block}.hpb{height:6px;background:#300;border-radius:3px;margin-top:2px}.hpb i{display:block;height:6px;background:#4c4;border-radius:3px}.ban{text-align:center;font-size:30px;font-weight:bold;letter-spacing:4px;color:#fd6;margin:6px}.fxt{position:absolute;top:0;right:2px;font-weight:bold}
 .t{display:inline-block;width:23%;margin:1%;padding:4px;border-radius:6px;font-size:11px;background:#222;vertical-align:top;box-sizing:border-box}.t.o0{background:#164}.t.o1{background:#634}.t.o2{background:#446}.t.o3{background:#553}.t.at{outline:3px solid #fd0}.t.adj{outline:2px dashed #fd0}
 button{font-size:16px;padding:10px 12px;margin:3px;border-radius:8px;border:0;background:#2d5;color:#000}button.s{background:#555;color:#fff}
 input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-box;margin:2px 0}
@@ -13,7 +14,7 @@ input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-bo
 .me{outline:3px solid #2d5}.rng{box-shadow:inset 0 0 0 2px #fd0}.log{white-space:pre-wrap;font-size:13px;background:#000;padding:6px;max-height:200px;overflow:auto}
 .row{display:flex;flex-wrap:wrap;align-items:center}.big{font-size:22px;font-weight:bold}h2{margin:6px 0}
 </style></head><body><div id="app"></div>
-<script src="logic.js"></script><script src="nascent.js"></script><script src="htl2.js"></script><script>
+<script src="logic.js"></script><script src="nascent.js"></script><script src="htl2.js"></script><script src="squad.js"></script><script>
 const $=s=>document.querySelector(s); let showCov=true, aa=null, G=null; let st=JSON.parse(localStorage.getItem('dbg_p1')||'null')||{c:null,rounds:[]}; let w=null, sel=null, timerI=null;
 const save=()=>localStorage.setItem('dbg_p1',JSON.stringify(st));
 function log(lines){ st.c.log=(st.c.log||[]).concat(lines).slice(-80); save(); }
@@ -29,7 +30,7 @@ function day(){ const c=st.c; const wk=((c.day-1)%7)>=5;
  <div>Day ${c.day} (${wk?'weekend':'weekday'}) · XP today ${c.xpToday}/${DBG.XP_GOAL} · Inspiration ${c.insp}/3 · Catch-up charges ${c.charges}/3</div>
  <div>Str ${c.attr.Str} Spd ${c.attr.Spd} Tough ${c.attr.Tough} Aff ${c.attr.Aff} · Move ${DBG.movement(c)} · Init ${DBG.initiative(c)}</div>
  ${portraitCard()}<div class=tip>${tipDay()}</div><h3>Recipes</h3>${c.recipes.map((r,i)=>`<label><input type=radio name=rc value=${i} ${i==0?'checked':''} style="width:auto"> ${r.name} ${r.prog}/${r.need}</label><br>`).join('')}
- <div class=row><button onclick="htl()">Hold the Line (Watch)</button><button onclick="nasStart()">Nascent turns</button><button onclick="act('meditate')">Meditate</button>
+ <div class=row><button onclick="htl()">Hold the Line (Watch)</button><button onclick="qiHome()">Sect Conquest (Qi squad)</button><button onclick="nasStart()">Nascent turns</button><button onclick="act('meditate')">Meditate</button>
  <button class=s onclick="act('insp')">Spend Inspiration</button><button class=s onclick="act('charge')">Spend catch-up charge</button>
  <button class=s onclick="act('end',true)">End day (played)</button><button class=s onclick="act('end',false)">End day (skipped)</button>
  <button class=s onclick="scoreView()">Score</button></div><details><summary>Test shortcuts / portrait</summary><div class=row>Level <input id=tl type=number min=1 max=10 value=${c.level} style=width:70px><button class=s onclick="setLvl()">Set level</button><button class=s onclick="c_xp()">+50 XP</button><button class=s onclick="skipDays(1)">+1 day</button><button class=s onclick="skipDays(7)">+7 days</button><button class=s onclick="act('cheat')">+1 Insp</button>
@@ -71,7 +72,7 @@ function scoreView(){ const c=st.c; const pace=Math.min(100,c.level*10), att=Mat
  <small>Pace/Attributes/Technique are solo-vs-target estimates; Equipment, Weekend, Economy, Monster are stubbed at 0 (no other players or loot in Phase 1).</small><br><button onclick="day()">Back</button>`); }
 
 // ---------- tutorial lines ----------
-function tipDay(){ const c=st.c; if(c.xpToday<DBG.XP_GOAL) return 'Tip: earn 100 XP (2 Hold the Line waves), then Meditate for your level and a d20 discovery roll (11+ = progress).';
+function tipDay(){ const c=st.c; if(c.xpToday<DBG.XP_GOAL) return 'Tip: earn 100 XP (2 Hold the Line waves or 2 Sect Conquest wins), then Meditate for your level and a d20 discovery roll (11+ = progress).';
  if(!c.medToday) return 'Tip: daily goal reached. Meditate now.'; if(c.charges) return 'Tip: spend a catch-up charge for an extra Meditation (needs +50 XP per charge).'; return 'Tip: done for today. End the day (or keep playing for gold).'; }
 function tipHtl(){ if(w.waveOver) return w.result==='clear'?'Wave cleared. Next wave, or back to the day.':'Gate fell. Retry (after 2 fails: assist -25% wave HP).';
  if(sel&&sel!=='up') return 'Tap a dashed pad to build '+sel+(sel==='Bastion'?' (on a lane, row 8)':'')+'. Blue outline = tower coverage.';
@@ -143,6 +144,48 @@ function exportWaves(){ const cols=['t','wave','level','realm','sec','kills','ea
  const csv=cols.join(',')+'\n'+(st.waves||[]).map(r=>cols.map(c=>'"'+String(r[c]??'').replace(/"/g,"'")+'"').join(',')).join('\n');
  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='htl_wave_log.csv'; a.click(); }
 document.addEventListener('visibilitychange',()=>{ if(document.hidden&&hg) hLast=performance.now(); });
+
+// ================= Sect Conquest: Qi squad battles (Ogre Battle-style) =================
+let qb=null, qRaf=0, qLast=0, qMsg='';
+function qiState(){ const c=st.c; st.qi=st.qi||{prog:[0,0,0,0,0],rows:{},gold:0,inv:[],gear:null,extra:{},day:0,wins:0,log:[]}; if(st.qi.day!==c.day){ st.qi.day=c.day; st.qi.wins=0; } return st.qi; }
+function qiSquadPaths(){ const me=SQUAD.ROLE2PATH[st.c.role]||'Body'; return [me].concat(['Body','Force','Light','Mass'].filter(p=>p!==me)); }
+function qiRow(p){ const q=qiState(); return q.rows[p]||SQUAD.PATHS[p].row; }
+function qiToggle(p){ const q=qiState(), r=qiRow(p)==='F'?'B':'F'; const fronts=qiSquadPaths().filter(x=>(x===p?r:qiRow(x))==='F').length; if(fronts<1){ qMsg='Keep at least one in front.'; } else q.rows[p]=r; save(); qiHome(); }
+function qiHome(){ const q=qiState(), c=st.c, ps=qiSquadPaths();
+ view(`<div class=big>Sect Conquest · Qi ${c.level}</div><div class=tip>${qMsg||'Pick a territory. 3 wins conquers it. First 2 wins today give +50 XP each; after that, battles still drop gold, gear and treasures.'} Wins today: ${q.wins}</div>
+ <h3>Squad (tap to swap row)</h3><div class=bar>${ps.map((p,i)=>`<button class=hb style="background:${SQUAD.PATHS[p].col};color:#000" onclick="qiToggle('${p}')">${i?p:'You ('+p+')'}<br><small>${qiRow(p)==='F'?'Front':'Back'}</small></button>`).join('')}</div>
+ <h3>Territories</h3>${SQUAD.TERR.map((t,i)=>`<button style="width:100%;text-align:left" onclick="qiFight(${i})">${q.prog[i]>=3?'✅ ':''}${t.n} · enemy Qi ~${t.lv} · ${Math.min(3,q.prog[i])}/3${q.prog[i]>=3?' (conquered: replay for loot)':''}</button>`).join('')}
+ <h3>Inventory · ${q.gold} gold${q.gear?' · equipped '+q.gear.n:''}</h3>${q.inv.length?q.inv.map((it,i)=>`<div class=row>${it.n} (${it.val}g) <button class=s onclick="qiSell(${i})">Sell</button>${it.k==='gear'?`<button class=s onclick="qiEquip(${i})">Equip</button>`:''}</div>`).join(''):'<div>Empty</div>'}
+ <div class=row>${Object.keys(SQUAD.CARDS).map(k=>`<button class=s onclick="qiBuy('${k}')">+1 ${k} (30g) [${q.extra[k]||0}]</button>`).join('')}</div>
+ <div class=row><button class=s onclick="qiExport()">Export battle log (CSV)</button><button class=s onclick="qMsg='';day()">Back to day</button></div>`); }
+function qiSell(i){ const q=qiState(), it=q.inv.splice(i,1)[0]; q.gold+=it.val; qMsg='Sold '+it.n+' for '+it.val+' gold.'; save(); qiHome(); }
+function qiEquip(i){ const q=qiState(), it=q.inv.splice(i,1)[0]; if(q.gear) q.inv.push(q.gear); q.gear=it; qMsg='Equipped '+it.n+' (+'+Math.round(it.bonus*100)+'% your HP/attack).'; save(); qiHome(); }
+function qiBuy(k){ const q=qiState(); if(q.gold<30){ qMsg='Need 30 gold.'; } else { q.gold-=30; q.extra[k]=(q.extra[k]||0)+1; qMsg='Bought a '+k+' charge.'; } save(); qiHome(); }
+function qiFight(t){ const q=qiState(), ps=qiSquadPaths(); qb=SQUAD.newBattle({role:st.c.role,L:st.c.level,terr:t,battle:Math.min(2,q.prog[t]%3),rows:ps.map(qiRow),gear:q.gear?q.gear.bonus:0});
+ qb.extraUsed={}; qMsg=''; qiView(); qLast=performance.now(); cancelAnimationFrame(qRaf); qRaf=requestAnimationFrame(qiLoop); }
+function qiCards(){ const q=qiState(); return Object.keys(SQUAD.CARDS).map(k=>`<button class=hb onclick="qiCard('${k}')">${k}<br><small>${qb.cards[k]+(q.extra[k]||0)} left</small></button>`).join(''); }
+function qiView(){ const b=qb; view(`<div class=big>${SQUAD.TERR[b.t].n} · battle ${b.bi+1}/3</div><div id=qh></div><div class=sq><div class="pan P" id=qp></div><div class="pan E" id=qe></div></div>
+ <div id=qban class=ban></div><div class=tip id=qm></div>
+ <div class=bar><button class=hb id=qpause onclick="qb.paused=!qb.paused;qiHud()">Pause</button><button class=hb id=qtac onclick="qiTac()">Tactic</button><button class=hb onclick="SQUAD.retreat(qb)">Retreat</button></div>
+ <div class=bar id=qcards>${qiCards()}</div><div class=row id=qend></div>`); qiHud(); }
+function qiTac(){ const T=SQUAD.TACTICS; qb.tactic=T[(T.indexOf(qb.tactic)+1)%T.length]; qiHud(); }
+function qiCard(k){ const q=qiState(), b=qb; if(!b.cards[k]&&(q.extra[k]||0)>0&&!b.over){ q.extra[k]--; b.cards[k]++; save(); } qMsg=SQUAD.card(b,k); $('#qcards').innerHTML=qiCards(); qiHud(); }
+function qiPanel(units){ const col=r=>`<div class=col>${units.filter(u=>u.row===r).map(u=>{ const f=qb.fx.filter(x=>x.u===u).pop();
+  return `<div class="tok ${u.hp<=0?'dead':''}" style="background:${SQUAD.PATHS[u.path].col}"><b>${SQUAD.PATHS[u.path].ic}${u.leader?'★':''}</b>${u.name.split(' ').pop()}${u.stun?' 💫':''}<div class=hpb><i style="width:${100*u.hp/u.mx}%"></i></div>${f?`<span class=fxt style="color:${f.c}">${f.txt}</span>`:''}</div>`; }).join('')}</div>`;
+ return col('B')+col('F'); }
+function qiHud(){ const b=qb; $('#qh').textContent=`Round ${b.round}/3 · ${Math.round(b.time)} s · Tactic: ${b.tactic}${b.paused?' · PAUSED':''}`; $('#qp').innerHTML=qiPanel(b.P); $('#qe').innerHTML=qiPanel(b.E);
+ $('#qm').textContent=qMsg||b.log[b.log.length-1]||''; $('#qtac').textContent='Tactic: '+b.tactic; $('#qpause').textContent=b.paused?'Resume':'Pause';
+ if(b.over){ $('#qban').textContent=b.result==='win'?'WINNERS':b.result==='retreat'?'RETREAT':'DEFEAT'; } }
+function qiLoop(now){ if(!qb||!$('#qp')) return; const dt=Math.min(.1,(now-qLast)/1000); qLast=now; const was=qb.over; SQUAD.step(qb,dt); qiHud(); if(!was&&qb.over) qiDone(); if(!qb.over) qRaf=requestAnimationFrame(qiLoop); }
+function qiDone(){ const q=qiState(), b=qb, c=st.c, lt=SQUAD.loot(b); let xp=0;
+ if(b.result==='win'){ q.prog[b.t]++; q.gold+=lt.gold; q.inv.push(...lt.items); if(q.wins<2&&c.xpToday<DBG.XP_GOAL){ c.xpToday+=50; xp=50; } q.wins++; }
+ const lootTxt=b.result==='win'?lt.gold+'g'+(lt.items.length?' + '+lt.items.map(i=>i.n).join(' + '):''):'none';
+ q.log.push({t:new Date().toISOString(),territory:SQUAD.TERR[b.t].n,level:b.L,enemies:b.E.length,tactic:b.tactic,cards:b.used.join(' ')||'none',sec:Math.round(b.time),result:b.result,survivors:SQUAD.alive(b.P).length+'/4',loot:lootTxt,ua:navigator.userAgent.slice(0,80)});
+ log(['Sect Conquest '+SQUAD.TERR[b.t].n+': '+b.result+(xp?' (+50 XP)':'')+(q.prog[b.t]===3&&b.result==='win'?' — territory conquered!':'')]); save();
+ $('#qend').innerHTML=`<b>${b.result==='win'?'Loot: '+lootTxt+(xp?' · +50 XP':''):b.result==='retreat'?'Retreated, no loot':'Defeated, no loot'}</b><button onclick="qiFight(${b.t})">Fight again</button><button class=s onclick="qiHome()">Territories</button>`; }
+function qiExport(){ const cols=['t','territory','level','enemies','tactic','cards','sec','result','survivors','loot','ua']; const rows=qiState().log;
+ const csv=cols.join(',')+'\n'+rows.map(r=>cols.map(k=>'"'+String(r[k]??'').replace(/"/g,"'")+'"').join(',')).join('\n');
+ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='qi_battle_log.csv'; a.click(); }
 
 st.c?day():create();
 </script></body></html>
