@@ -35,17 +35,17 @@ const DIRS={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
 const tile=(x,y)=>(x<0||y<0||x>=W||y>=H)?'T':MAP[y][x];
 function npcAt(w,x,y){ return NPCS.find(n=>{ const p=w.npc[n.id]; return p.x===x&&p.y===y; }); }
 function passable(w,x,y,dy){ const t=tile(x,y); if('THDw'.includes(t)) return false; if(t==='L'&&dy!==1) return false; if(npcAt(w,x,y)) return false; if(w.x===x&&w.y===y) return false; return true; }
-function newState(s){ s=s||{}; const w={x:s.x??11,y:s.y??7,dir:s.dir||'down',beaten:s.beaten||{},hp:s.hp||null,steps:s.steps||0,npc:{}};
+function newState(s){ s=s||{}; const w={x:s.x??11,y:s.y??7,dir:s.dir||'down',beaten:s.beaten||{},hp:s.hp||null,pk:s.pk||null,steps:s.steps||0,npc:{}};
   NPCS.forEach(n=>w.npc[n.id]={x:n.x,y:n.y,dir:n.dir}); return w; }
 let w=null, cv, cx, hooks, held=null, mv=null, txt=null, busy=false, raf=0, rng=Math.random, el;
-function save(){ hooks.save({x:w.x,y:w.y,dir:w.dir,beaten:w.beaten,hp:w.hp,steps:w.steps}); }
+function save(){ hooks.save({x:w.x,y:w.y,dir:w.dir,beaten:w.beaten,hp:w.hp,pk:w.pk,steps:w.steps}); }
 function say(t,then){ txt={t,then}; el.querySelector('#wtx').style.display='block'; el.querySelector('#wtx').textContent=t+'  ▼'; }
 function closeTxt(){ const th=txt&&txt.then; txt=null; el.querySelector('#wtx').style.display='none'; if(th) th(); }
 function face(){ const [dx,dy]=DIRS[w.dir]; return [w.x+dx,w.y+dy]; }
 function A(){ if(txt) return closeTxt(); if(busy||mv) return; const [fx,fy]=face(), n=npcAt(w,fx,fy);
   if(n){ const back={up:'down',down:'up',left:'right',right:'left'}[w.dir]; w.npc[n.id].dir=back; const custom=hooks.talk&&hooks.talk(n.id);
     if(n.trainer&&!w.beaten[n.id]) return trainerFight(n); return say(custom||(n.trainer?n.after:n.line)); }
-  if(tile(fx,fy)==='R'||tile(w.x,w.y)==='R') { w.hp=null; save(); return say('You pray at the shrine. Your squad is fully restored!'); }
+  if(tile(fx,fy)==='R'||tile(w.x,w.y)==='R') { w.hp=null; w.pk=null; save(); return say('You pray at the shrine. Your cultivator is fully restored!'); }
   if(tile(fx,fy)==='D') return say('The door is locked. (Interiors come later.)'); }
 function B(){ if(txt) return closeTxt(); if(busy||mv) return; say('Menu: A to keep exploring.  Progress saves automatically. (Leave with the ✕ button.)'); }
 function step(){ if(mv||txt||busy||!held) return; const d=held; const [dx,dy]=DIRS[d];
