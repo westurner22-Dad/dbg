@@ -121,30 +121,21 @@ function nTap(t){ const me=G.players[0]; if(G.own[t].o===0){ G.log.push(NAS.marc
 // ================= Hold the Line v2 (real-time lane, Age of War style) =================
 let hg=null, hLast=0, hRaf=0, hMsg='';
 function htl(){ const c=st.c; hg=HTL2.newGame(c.role,c.level,c.realmIdx||0); HTL2.startWave(hg); hMsg='Wave 1: the Collective marches from the right. Buy units with Sect Credit.'; htlView(); hLast=performance.now(); cancelAnimationFrame(hRaf); hRaf=requestAnimationFrame(htlLoop); }
-function htlView(){ const U=HTL2.UNITS, T=HTL2.TUR;
+function htlView(){ const U=HTL2.UNITS;
  view(`<div class=row><span class=big>${HTL2.REALMS[hg.R]} ${hg.L} · Wave <span id=hw></span></span></div><div id=hs></div>
  <canvas id=cv width=1000 height=420></canvas><div class=tip id=hm></div>
  <div class=bar><button class=hb id=t1>Burst</button><button class=hb id=t2>Rally</button></div>
  <div class=bar>${Object.keys(U).map(k=>`<button class=hb onclick="hMsg=HTL2.buy(hg,'${k}')">${k}<br><small>${U[k].cost}${U[k].realm?' · Core+':''}</small></button>`).join('')}</div>
- <div class=bar id=slots></div><div class=bar id=pick style="flex-wrap:wrap"></div>
  <div class=row id=hctl></div>
  <button class=s onclick="exportWaves()">Export wave log (CSV)</button><div class=hpad></div>
- <button class="hb mv" id=mvL>◀ Back</button><button class="hb mv" id=mvR>Fwd ▶</button>`); hSlotKey=''; hPick=-1;
+ <button class="hb mv" id=mvL>◀ Back</button><button class="hb mv" id=mvR>Fwd ▶</button>`); 
  const hold=(id,v)=>{ const b=$('#'+id); b.addEventListener('pointerdown',e=>{e.preventDefault();hg.hero.move=v;try{b.setPointerCapture(e.pointerId)}catch(_){}});
    ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,e=>{e.preventDefault();if(hg&&hg.hero.move===v)hg.hero.move=0;})); };
  hold('mvL',-1); hold('mvR',1);
  [['t1',1],['t2',2]].forEach(([id,n])=>$('#'+id).addEventListener('pointerdown',e=>{e.preventDefault();hMsg=HTL2.tech(hg,n);htlHud();}));
  htlHud(); }
-let hSlotKey='', hPick=-1;
-function slotTap(i){ hPick=hPick===i?-1:i; hSlotKey=''; htlHud(); }
-function slotBuild(k){ hMsg=HTL2.build(hg,hPick,k); hPick=-1; hSlotKey=''; htlHud(); }
-function renderSlots(){ const g=hg, cr=Math.floor(g.credit), key=g.slots.map(s=>s?s.k:'-').join()+hPick+(hPick>=0?Object.values(HTL2.TUR).map(t=>cr>=t.cost).join():'');
- if(key===hSlotKey) return; hSlotKey=key;
- $('#slots').innerHTML=g.slots.map((sl,i)=>sl?`<button class=s style="flex:1">${sl.k}</button>`:`<button style="flex:1" onclick="slotTap(${i})">${hPick===i?'▼ ':''}Turret ${i+1}</button>`).join('');
- $('#pick').innerHTML=(hPick>=0?Object.keys(HTL2.TUR).map(k=>`<button style="flex:1 0 30%" ${cr<HTL2.TUR[k].cost?'class=s':''} onclick="slotBuild('${k}')">${k}<br><small>${HTL2.TUR[k].cost}</small></button>`).join(''):''); }
-function htlHud(){ const g=hg, h=g.hero; $('#hw').textContent=g.wave; $('#hs').textContent=`Gate ${Math.round(g.gate)}/${Math.round(g.gateMax)}${g.wall>0?' · Bastion '+Math.round(g.wall):''} · Credit ${Math.floor(g.credit)} · HP ${Math.round(h.hp)}/${Math.round(h.mx)}${h.ko>0?' (KO)':''} · ${Math.round(g.t)} s · kills ${g.kills}`;
+function htlHud(){ const g=hg, h=g.hero; $('#hw').textContent=g.wave; $('#hs').textContent=`Gate ${Math.round(g.gate)}/${Math.round(g.gateMax)} · Credit ${Math.floor(g.credit)} · HP ${Math.round(h.hp)}/${Math.round(h.mx)}${h.ko>0?' (KO)':''} · ${Math.round(g.t)} s · kills ${g.kills}`;
  $('#hm').textContent=hMsg; $('#t1').textContent=h.t1>0?'Burst '+Math.ceil(h.t1):'Burst'; $('#t2').textContent=h.t2>0?'Rally '+Math.ceil(h.t2):'Rally';
- renderSlots();
  $('#hctl').innerHTML=g.waveOver?(`<b>${g.result==='clear'?'Wave cleared':'The Gate fell'}</b>&nbsp;`+(g.result==='clear'?'<button onclick="htlNext()">Next wave</button>':'<button onclick="htl()">Retry Watch</button>')+
    (st.c.level>=10&&(st.c.realmIdx||0)<2?'<button onclick="ageUp()">Age up ⇧</button>':'')+'<button class=s onclick="htlLeave()">Back to day</button>'):'<button class=s onclick="htlLeave()">Leave</button>'; }
 function htlLoop(now){ if(!hg||!$('#cv')) return; const dt=Math.min(.1,(now-hLast)/1000); hLast=now; const was=hg.waveOver; HTL2.step(hg,dt);
@@ -152,8 +143,7 @@ function htlLoop(now){ if(!hg||!$('#cv')) return; const dt=Math.min(.1,(now-hLas
 function drawLane(){ const cv=$('#cv'), x=cv.getContext('2d'), g=hg, W=1000, Y=300; x.clearRect(0,0,W,420);
  x.fillStyle='#1d2b1d'; x.fillRect(0,Y+20,W,100); x.fillStyle='#456'; x.fillRect(0,Y-120,HTL2.GATE_X,140); x.fillStyle='#fff'; x.font='22px sans-serif'; x.fillText('GATE',2,Y-130);
  const bar=(px,py,f,c)=>{ x.fillStyle='#300'; x.fillRect(px-20,py,40,6); x.fillStyle=c; x.fillRect(px-20,py,40*Math.max(0,f),6); };
- bar(HTL2.GATE_X/2+20,Y-160,g.gate/g.gateMax,'#4af'); if(g.wall>0){ x.fillStyle='#887'; x.fillRect(HTL2.GATE_X,Y-60,14,80); }
- g.slots.forEach((s,i)=>{ x.fillStyle=s?'#fd6':'#333'; x.fillRect(4,Y-110+i*34,30,26); if(s){ x.fillStyle='#000'; x.font='16px sans-serif'; x.fillText(s.k[0],12,Y-91+i*34);} });
+ bar(HTL2.GATE_X/2+20,Y-160,g.gate/g.gateMax,'#4af');
  for(const a of g.allies){ const u=HTL2.UNITS[a.k], sz=a.k==='General'?30:20; x.fillStyle=u.col; x.fillRect(a.x-sz/2,Y-sz,sz,sz); bar(a.x,Y-sz-10,a.hp/a.mx,'#4c4'); }
  for(const f of g.foes){ const e=HTL2.EN[f.k], sz=e.boss?44:f.k==='Tractor'?34:22; x.fillStyle=e.col; x.beginPath(); x.arc(f.x,Y-sz/2,sz/2,0,7); x.fill(); bar(f.x,Y-sz-10,f.hp/f.mx,'#e44'); }
  const h=g.hero; if(h.ko<=0){ x.fillStyle='#2d5'; x.fillRect(h.x-16,Y-56,32,56); x.fillStyle='#000'; x.font='bold 18px sans-serif'; x.fillText(st.c.role[0],h.x-6,Y-22); bar(h.x,Y-70,h.hp/h.mx,'#2d5'); }
