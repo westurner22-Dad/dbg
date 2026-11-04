@@ -10,14 +10,15 @@ const BEASTS=[
  {n:'Stone Tortoise',em:'🐢',ty:'Mass',hp:1.4,atk:.8,spd:6,mv:'Rock Shell'},{n:'Jade Serpent',em:'🐍',ty:'Mass',hp:1.0,atk:1.0,spd:10,mv:'Jade Coil'},
  {n:'Gale Hawk',em:'🦅',ty:'Force',hp:.85,atk:1.1,spd:14,mv:'Gale Dive'},{n:'Thunder Boar',em:'🐗',ty:'Force',hp:1.2,atk:1.05,spd:8,mv:'Thunder Charge'},
  {n:'Iron Ape',em:'🦍',ty:'Body',hp:1.15,atk:1.0,spd:9,mv:'Iron Fist'}];
-const TRAINER_BEAST={n:'Red Banner Wolf',em:'🐺',ty:'Force',hp:1.3,atk:1.15,spd:11,mv:'Banner Howl'};
+const TRAINER_BEAST={n:'Red Banner Wolf',em:'🐺',ty:'Force',hp:1.08,atk:1.13,spd:11,mv:'Banner Howl'};
 const MOVE_TYPE=t=>FF.KIT.Light.includes(t)?'Light':FF.KIT.Force.includes(t)?'Force':FF.KIT.Mass.includes(t)?'Mass':'Body';
+const PB={Body:{hp:.83,dm:.83},Force:{hp:.9,dm:.9},Light:{hp:1.2,dm:1.2},Mass:{hp:1.3,dm:1.3}};
 function moves(path,L){ return ['Attack'].concat(FF.KIT[path].filter(t=>t!=='Focus Breathing'&&FF.TECH[t].lv<=L).slice(0,3)); }
 function newBattle(o){ const p=FF.PATHS[o.path], L=o.L, rng=o.rng||Math.random;
-  const me={name:o.name||'You',path:o.path,em:p.em,L,mx:Math.round(300*Math.max(1.05,p.hp)*1.45*sc(L)*(1+(o.gear||0))),mmp:Math.round(100*p.mp*sc(L)),atk:Math.round(80*p.atk*sc(L)*(1+(o.gear||0))),mat:Math.round(80*p.mat*sc(L)*(1+(o.gear||0))),spd:p.spd+1,shield:0,dr:0,crit:0,dodge:0};
+  const me={name:o.name||'You',path:o.path,em:p.em,L,mx:Math.round(PB[o.path].hp*300*Math.max(1.05,p.hp)*1.45*sc(L)*(1+(o.gear||0))),mmp:Math.round(100*p.mp*sc(L)),atk:Math.round(80*p.atk*sc(L)*(1+(o.gear||0))),mat:Math.round(80*p.mat*sc(L)*(1+(o.gear||0))),spd:p.spd+1,shield:0,dr:0,crit:0,dodge:0};
   me.hp=Math.max(1,Math.round((o.hpFrac??1)*me.mx)); me.mp=Math.round((o.mpFrac??1)*me.mmp); me.moves=moves(o.path,L);
   const B=o.trainer?TRAINER_BEAST:BEASTS[Math.floor(rng()*BEASTS.length)], bl=Math.max(1,L+(o.trainer?1:Math.floor(rng()*3)-1));
-  const foe={name:B.n,em:B.em,ty:B.ty,L:bl,mx:Math.round(420*B.hp*sc(bl)),atk:Math.round(54*B.atk*sc(bl)),spd:B.spd,mv:B.mv,slow:0}; foe.hp=foe.mx;
+  const foe={name:B.n,em:B.em,ty:B.ty,L:bl,mx:Math.round(420*B.hp*sc(bl)*(.98+.008*(L-1))),atk:Math.round(54*B.atk*sc(bl)*(.98+.008*(L-1))),spd:B.spd,mv:B.mv,slow:0}; foe.hp=foe.mx;
   return {me,foe,rng,turn:0,over:false,result:null,runs:0,bag:Object.assign({},o.bag||{}),trainer:!!o.trainer}; }
 const cost=(b,t)=>t==='Attack'?0:Math.round(FF.TECH[t].tier*.1*b.me.mmp);
 function dmgTo(b,base,pw,ty,defTy,lines,target){ const e=eff(ty,defTy); let d=base*pw*e*(0.85+b.rng()*.3); const crit=b.rng()<.0625; if(crit) d*=1.5; d=Math.max(1,Math.round(d)); return {d,e,crit}; }
@@ -33,7 +34,7 @@ function turn(b,act){ const L=[], me=b.me, f=b.foe; b.turn++;
     if(T.fx==='shield'){ me.shield=Math.min(Math.round(.35*me.mx),Math.round(me.mat*T.pw)); say(`A radiant shield absorbs ${me.shield} damage!`); return; }
     if(T.fx==='dr'){ me.dr=3; say(`${me.name}'s skin turned to stone!`); return; } if(T.fx==='regen'){ me.regen=3; me.regenAmt=Math.round(me.mat*T.pw); say(`${me.name} draws strength from the earth!`); return; }
     if(T.fx==='crit'){ me.crit=1; say(`${me.name} is focusing on a weak point!`); return; } if(T.fx==='dodge'||T.fx==='dodge25'){ me.dodge=1; say(`${me.name}'s form flows like water!`); return; }
-    const ty=MOVE_TYPE(t), r=dmgTo(b,T.phys||t==='Attack'?me.atk:me.mat,T.pw||1,ty,f.ty); let d=r.d; if(me.crit&&(T.phys||t==='Attack')){ d*=2; me.crit=0; r.crit=1; }
+    const ty=MOVE_TYPE(t), r=dmgTo(b,T.phys||t==='Attack'?me.atk:me.mat,T.pw||1,ty,f.ty); let d=Math.round(r.d*PB[me.path].dm); if(me.crit&&(T.phys||t==='Attack')){ d*=2; me.crit=0; r.crit=1; }
     f.hp=Math.max(0,f.hp-d); say(null,{hit:'foe',d});
     if(r.crit) say('A critical hit!'); if(r.e>1) say("It's super effective!"); if(r.e<1) say("It's not very effective...");
     if((T.slow||t==='Kick')&&f.hp>0){ f.slow=1; say(`${f.name} was slowed!`); } };
@@ -49,7 +50,7 @@ function ai(b){ const me=b.me, f=b.foe; if(me.hp/me.mx<.3&&(b.bag['Healing Potio
   if(me.hp/me.mx<.45&&me.moves.includes('Healing Light')&&me.mp>=cost(b,'Healing Light')) return {k:'move',t:'Healing Light'};
   let best='Attack', bv=0; for(const t of me.moves){ const T=FF.TECH[t]||{pw:1,phys:1}; if(!T.pw||T.tg==='ally'||me.mp<cost(b,t)) continue; const v=(T.phys||t==='Attack'?me.atk:me.mat)*T.pw*eff(MOVE_TYPE(t),f.ty); if(v>bv){ bv=v; best=t; } }
   if(best==='Attack'&&me.mp<.2*me.mmp) return {k:'meditate'}; return {k:'move',t:best}; }
-const api={BEASTS,TRAINER_BEAST,BEATS,eff,MOVE_TYPE,newBattle,turn,ai,cost};
+const api={PB,BEASTS,TRAINER_BEAST,BEATS,eff,MOVE_TYPE,newBattle,turn,ai,cost};
 // ---------------- UI ----------------
 if(typeof document!=='undefined'){
  let b,ui,cb,q=[],menu='main',cur=0,disp={me:0,foe:0},anim=0;
