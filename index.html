@@ -7,6 +7,7 @@ body{font-family:system-ui,sans-serif;margin:0 auto;background:#111;color:#eee;m
 html,body{touch-action:manipulation}button,select,#cv,.mv{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.mv{position:fixed;bottom:10px;width:30%;height:84px;font-size:26px;z-index:9;opacity:.92}#mvL{left:8px}#mvR{right:8px}.hpad{height:110px}#cv{width:100%;height:auto;background:#0d1520;border-radius:8px;touch-action:none}.hb{font-size:20px;padding:14px 10px;flex:1}.bar{display:flex;gap:4px;margin:3px 0}.bar button{flex:1;margin:0}
 .sq{display:flex;gap:6px}.pan{flex:1;border-radius:8px;padding:4px;display:flex;gap:4px}.pan.P{background:#123a66}.pan.E{background:#5a1717;flex-direction:row-reverse}.col{flex:1;display:flex;flex-direction:column;gap:4px}.tok{border-radius:6px;padding:4px 2px;text-align:center;font-size:12px;color:#000;min-height:52px;position:relative}.tok.dead{opacity:.25}.tok b{font-size:20px;display:block}.hpb{height:6px;background:#300;border-radius:3px;margin-top:2px}.hpb i{display:block;height:6px;background:#4c4;border-radius:3px}.ban{text-align:center;font-size:30px;font-weight:bold;letter-spacing:4px;color:#fd6;margin:6px}.fxt{position:absolute;top:0;right:2px;font-weight:bold}
 .fs{position:relative;height:46vh;min-height:300px;background:linear-gradient(#2a3d5c,#3d5a3a 60%,#2b3a22);border-radius:6px;overflow:hidden}.sp{position:absolute;width:24%;text-align:center;touch-action:manipulation;transition:transform .15s}.sp .em{font-size:42px;line-height:1.1}.sp .nm{font-size:11px;color:#fff;text-shadow:0 0 3px #000}.sp.P .em{transform:scaleX(-1)}.sp.ko{opacity:.45}.sp.tgt{outline:3px dashed #ff6;border-radius:8px}.sp.act{outline:2px solid #6cf;border-radius:8px}.sp.P.fwd{transform:translateX(-30%)}.sp.E.fwd{transform:translateX(30%)}.sp.flash .em{animation:fl .3s}@keyframes fl{50%{filter:brightness(3)}}.sp.pose .em{animation:po .5s 3}@keyframes po{50%{transform:scaleX(-1) translateY(-14px)}}.dmg{position:absolute;left:0;right:0;top:0;font-weight:bold;font-size:20px;text-shadow:0 0 3px #000;animation:up .9s forwards;pointer-events:none}@keyframes up{to{transform:translateY(-30px);opacity:0}}.fbx{display:flex;gap:4px;margin-top:4px}.fb1,.fb2,.fb3{background:#0a1a6e;border:2px solid #ddd;border-radius:6px;color:#fff;padding:6px;font-size:14px}.fb1{flex:0 0 34%}.fb2{flex:1;display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start}.fb3{margin-top:4px}.strow{display:flex;justify-content:space-between;font-size:15px;padding:2px 0}.fc{flex:1 0 45%;margin:0;padding:12px 4px;font-size:16px;background:#1d3fa8;color:#fff;border:1px solid #9bd}.fc[disabled]{opacity:.4}.fhint{flex:1 0 100%;color:#ff6}.fline{min-height:24px;margin:4px 0;font-size:15px;display:flex;gap:4px}
+.wpad{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:0 6px}.dpad{position:relative;width:180px;height:180px}.dp{position:absolute;width:60px;height:60px;margin:0;font-size:24px;background:#333;color:#fff;border-radius:8px;padding:0}.dp-up{left:60px;top:0}.dp-down{left:60px;top:120px}.dp-left{left:0;top:60px}.dp-right{left:120px;top:60px}.ab{display:flex;gap:14px;align-items:center}.wb{width:72px;height:72px;border-radius:50%;font-size:26px;font-weight:bold;background:#a22;color:#fff;margin:0}#wA{margin-bottom:40px}
 .t{display:inline-block;width:23%;margin:1%;padding:4px;border-radius:6px;font-size:11px;background:#222;vertical-align:top;box-sizing:border-box}.t.o0{background:#164}.t.o1{background:#634}.t.o2{background:#446}.t.o3{background:#553}.t.at{outline:3px solid #fd0}.t.adj{outline:2px dashed #fd0}
 button{font-size:16px;padding:10px 12px;margin:3px;border-radius:8px;border:0;background:#2d5;color:#000}button.s{background:#555;color:#fff}
 input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-box;margin:2px 0}
@@ -15,7 +16,7 @@ input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-bo
 .me{outline:3px solid #2d5}.rng{box-shadow:inset 0 0 0 2px #fd0}.log{white-space:pre-wrap;font-size:13px;background:#000;padding:6px;max-height:200px;overflow:auto}
 .row{display:flex;flex-wrap:wrap;align-items:center}.big{font-size:22px;font-weight:bold}h2{margin:6px 0}
 </style></head><body><div id="app"></div>
-<script src="logic.js"></script><script src="nascent.js"></script><script src="htl2.js"></script><script src="ff.js"></script><script>
+<script src="logic.js"></script><script src="nascent.js"></script><script src="htl2.js"></script><script src="ff.js"></script><script src="world.js"></script><script>
 const $=s=>document.querySelector(s); let showCov=true, aa=null, G=null; let st=JSON.parse(localStorage.getItem('dbg_p1')||'null')||{c:null,rounds:[]}; let w=null, sel=null, timerI=null;
 const save=()=>localStorage.setItem('dbg_p1',JSON.stringify(st));
 function log(lines){ st.c.log=(st.c.log||[]).concat(lines).slice(-80); save(); }
@@ -31,7 +32,7 @@ function day(){ const c=st.c; const wk=((c.day-1)%7)>=5;
  <div>Day ${c.day} (${wk?'weekend':'weekday'}) · XP today ${c.xpToday}/${DBG.XP_GOAL} · Inspiration ${c.insp}/3 · Catch-up charges ${c.charges}/3</div>
  <div>Str ${c.attr.Str} Spd ${c.attr.Spd} Tough ${c.attr.Tough} Aff ${c.attr.Aff} · Move ${DBG.movement(c)} · Init ${DBG.initiative(c)}</div>
  ${portraitCard()}<div class=tip>${tipDay()}</div><h3>Recipes</h3>${c.recipes.map((r,i)=>`<label><input type=radio name=rc value=${i} ${i==0?'checked':''} style="width:auto"> ${r.name} ${r.prog}/${r.need}</label><br>`).join('')}
- <div class=row><button onclick="htl()">Hold the Line (Watch)</button><button onclick="qiHome()">Sect Conquest (Qi squad)</button><button onclick="nasStart()">Nascent turns</button><button onclick="act('meditate')">Meditate</button>
+ <div class=row><button onclick="htl()">Hold the Line (Watch)</button><button onclick="qiHome()">Sect Conquest (Qi squad)</button><button onclick="worldOpen()">Explore (Overworld)</button><button onclick="nasStart()">Nascent turns</button><button onclick="act('meditate')">Meditate</button>
  <button class=s onclick="act('insp')">Spend Inspiration</button><button class=s onclick="act('charge')">Spend catch-up charge</button>
  <button class=s onclick="act('end',true)">End day (played)</button><button class=s onclick="act('end',false)">End day (skipped)</button>
  <button class=s onclick="scoreView()">Score</button></div><details><summary>Test shortcuts / portrait</summary><div class=row>Level <input id=tl type=number min=1 max=10 value=${c.level} style=width:70px><button class=s onclick="setLvl()">Set level</button><button class=s onclick="c_xp()">+50 XP</button><button class=s onclick="skipDays(1)">+1 day</button><button class=s onclick="skipDays(7)">+7 days</button><button class=s onclick="act('cheat')">+1 Insp</button>
@@ -192,15 +193,32 @@ function fStep(){ const b=fb; if(!b||!$('#fs')) return; const e=FF.act(b); fRend
    e.ev.forEach(x=>{ const t=$('#u'+x.id); if(t){ t.insertAdjacentHTML('beforeend',`<span class=dmg style="color:${x.c||'#fff'}">${x.txt}</span>`); t.classList.add('flash'); } }); }
  if(b.over) return setTimeout(fEnd,700); if(!e||b.phase==='cmd'){ fMsg=''; fCmdUI(); return; } fTimer=setTimeout(fStep,650); }
 function fEnd(){ const q=qiState(), b=fb, c=st.c, lt=FF.loot(b); let xp=0; q.bag=Object.assign({},b.items);
- if(b.result==='win'){ q.prog[b.t]++; q.gold+=lt.gold; q.inv.push(...lt.items); if((q.wins||0)<2&&c.xpToday<DBG.XP_GOAL){ c.xpToday+=50; xp=50; } q.wins=(q.wins||0)+1; }
+ if(b.result==='win'){ if(!b.world) q.prog[b.t]++; q.gold+=lt.gold; q.inv.push(...lt.items); if((q.wins||0)<2&&c.xpToday<DBG.XP_GOAL){ c.xpToday+=50; xp=50; } q.wins=(q.wins||0)+1; }
  const lootTxt=b.result==='win'?lt.gold+'g'+(lt.items.length?' + '+lt.items.map(i=>i.n).join(' + '):''):'none';
  q.log.push({t:new Date().toISOString(),territory:FF.TERR[b.t].n,level:b.L,enemies:b.E.length,rounds:b.round,used:b.used.join(' ')||'none',sec:Math.round((performance.now()-fT0)/1000),result:b.result,survivors:FF.alive(b.P).length+'/4',loot:lootTxt,ua:navigator.userAgent.slice(0,80)});
  log(['Sect Conquest '+FF.TERR[b.t].n+': '+b.result+' in '+b.round+' rounds'+(xp?' (+50 XP)':'')+(q.prog[b.t]===3&&b.result==='win'?' — territory conquered!':'')]); save();
  if(b.result==='win') document.querySelectorAll('.sp.P:not(.ko)').forEach(s=>s.classList.add('pose'));
- const lines=b.result==='win'?['Obtained '+lt.gold+' gold'].concat(lt.items.map(i=>'Obtained '+i.n)).concat(xp?['+50 XP']:[]).concat(q.prog[b.t]===3?[FF.TERR[b.t].n+' conquered!']:[]):[b.result==='retreat'?'The squad escaped.':'The squad has fallen…'];
- $('#fcm').innerHTML=''; $('#fen').innerHTML=lines.join('<br>'); $('#fl').innerHTML=`<button class=fc onclick="qiFight(${b.t})">Next battle</button><button class=fc onclick="qiHome()">Territories</button>`; }
+ const lines=b.result==='win'?['Obtained '+lt.gold+' gold'].concat(lt.items.map(i=>'Obtained '+i.n)).concat(xp?['+50 XP']:[]).concat(!b.world&&q.prog[b.t]===3?[FF.TERR[b.t].n+' conquered!']:[]):[b.result==='retreat'?'The squad escaped.':'The squad has fallen…'];
+ $('#fcm').innerHTML=''; $('#fen').innerHTML=lines.join('<br>'); $('#fl').innerHTML=b.world?`<button class=fc onclick="worldBack()">Continue</button>`:`<button class=fc onclick="qiFight(${b.t})">Next battle</button><button class=fc onclick="qiHome()">Territories</button>`; }
 function qiExport(){ const cols=['t','territory','level','enemies','rounds','used','sec','result','survivors','loot','ua']; const rows=qiState().log;
  const csv=cols.join(',')+'\n'+rows.map(r=>cols.map(k=>'"'+String(r[k]??'').replace(/"/g,"'")+'"').join(',')).join('\n');
  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='qi_battle_log.csv'; a.click(); }
+// ================= Explore (Overworld) demo =================
+let wMsg='';
+function worldOpen(){ st.world=st.world||{}; view(`<div class=row><span class=big>Explore · Sect Town</span>&nbsp;<button class=s onclick="World.stop();save();day()">✕ Leave</button></div><div id=wv></div><div class=tip>D-pad to walk (hold), A to talk / pray at ⛩️, B for menu. Tall grass hides Collective scouts. Desktop: arrows + Z/X.</div>`);
+ World.open($('#wv'),st.world,{save:s=>{ st.world=s; save(); },battle:worldBattle,talk:id=>null /* hook: BoG cameos & side-story chat during polish */,msg:wMsg}); wMsg=''; }
+function worldBattle(kind,npcId){ const q=qiState(), L=st.c.level, t=Math.min(4,Math.floor((L-1)/2));
+ fb=FF.newBattle({role:st.c.role,L,terr:t,battle:kind==='trainer'?2:0,gear:q.gear?q.gear.bonus:0,items:q.bag}); fb.world=kind;
+ if(kind==='wild'){ fb.E=fb.E.slice(1,1+2+Math.floor(Math.random()*2)); if(fb.E.length<2) fb.E.push(fb.E[0]&&Object.assign({},fb.E[0],{id:9999})); }
+ else { fb.E[0].name='Scout Ren'; fb.npc=npcId; }
+ const hp=st.world.hp; if(hp) fb.P.forEach(u=>{ const r=hp[u.path]; if(r){ u.hp=Math.max(0,Math.round(r[0]*u.mx)); u.mp=Math.round(r[1]*u.mmp); } });
+ if(!FF.alive(fb.P).length) fb.P.forEach(u=>u.hp=u.mx);
+ fT0=performance.now(); fCmds={}; fCi=0; fMode=null; fMsg='';
+ view(`<div id=fs class=fs></div><div class=fbx><div class=fb1 id=fen></div><div class=fb2 id=fcm></div></div><div class=fb3 id=fst></div><div class=fline id=fl></div>`); fRender(); fCmdUI(); }
+function worldBack(){ const b=fb, s=st.world;
+ if(b.result==='loss'){ s.hp=null; s.x=11; s.y=7; s.dir='down'; wMsg='Your squad was carried back to the shrine and fully healed.'; }
+ else { s.hp={}; b.P.forEach(u=>s.hp[u.path]=[u.hp/u.mx,u.mp/u.mmp]); if(b.world==='trainer'&&b.result==='win'){ s.beaten=s.beaten||{}; s.beaten[b.npc]=1; wMsg='Scout Ren: Hmph. Next time, cultivator.'; } }
+ save(); worldOpen(); }
+
 st.c?day():create();
 </script></body></html>
