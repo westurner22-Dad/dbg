@@ -16,7 +16,7 @@ input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-bo
 .lane{background:#2a2a3a}.pad{outline:2px dashed #666}.difficult{background:#4a3a20}.high{background:#2f4f2f}.hazard{background:#5a1a1a}.obstacle{background:#000}
 .me{outline:3px solid #2d5}.rng{box-shadow:inset 0 0 0 2px #fd0}.log{white-space:pre-wrap;font-size:13px;background:#000;padding:6px;max-height:200px;overflow:auto}
 .row{display:flex;flex-wrap:wrap;align-items:center}.big{font-size:22px;font-weight:bold}h2{margin:6px 0}
-</style></head><body><div id="app"></div>
+.nsb{background:radial-gradient(circle at 30% 20%,#2b2f3d,#12141b 70%),repeating-linear-gradient(45deg,#0000 0 6px,#ffffff05 6px 7px);border-radius:10px;padding:6px;color:#eee;user-select:none;-webkit-user-select:none;touch-action:manipulation}.nhud{font:13px sans-serif;padding:4px 2px}.nmap{position:relative}.nban{position:absolute;left:8%;right:8%;top:40%;text-align:center;background:#000c;color:#fff;font:bold 18px sans-serif;padding:8px;border-radius:20px}.nbar{display:flex;align-items:center;gap:6px;background:#0008;border-radius:20px;padding:6px 8px;margin-top:4px}.nmsg{flex:1;font:14px sans-serif}.npill{border-radius:20px;padding:8px 14px;margin:0;background:#ff8fb8;color:#111;font-weight:bold;border:0}.nmob{background:#c9a3ff}.nsum{font:12px sans-serif;padding:6px 2px}</style></head><body><div id="app"></div>
 <script src="logic.js"></script><script src="nascent.js"></script><script src="htl2.js"></script><script src="ff.js"></script><script src="pkbattle.js"></script><script src="world.js"></script><script>
 const $=s=>document.querySelector(s); let showCov=true, aa=null, G=null; let st=JSON.parse(localStorage.getItem('dbg_p1')||'null')||{c:null,rounds:[]}; let w=null, sel=null, timerI=null;
 const save=()=>localStorage.setItem('dbg_p1',JSON.stringify(st));
@@ -93,7 +93,8 @@ const Portrait={timer:null,cache:JSON.parse(localStorage.getItem('dbg_pcache')||
 function portraitCard(){ const c=st.c, k=c.portraitKey, e=k&&Portrait.cache[k];
  return `<div class=pc id=pcard><div class=pimg>${(c.slot||1)===1?'⚔️':'🔵'}</div><div><b>${c.name}</b> · Player ${c.slot||1}<br>Holding: <b>${Portrait.heldItem(c)}</b><br><small>${c.portraitPrefs||'(no portrait preferences)'}<br>${Portrait.pending?'regenerating…':e?'cached '+k:'not generated'} · placeholder (no image generation)</small></div></div>`; }
 // ---------- Nascent ----------
-function nasStart(){ G=st.nas?Object.assign(NAS.newGame(),st.nas,{rng:Math.random}):NAS.newGame(); if(NAS.active(G)!==0) NAS.endTurn(G); nasDraw(); }
+function nasStart(){ view(`<div id=nasv></div>`); NAS2.open($('#nasv'),st.nas2||null,{path:FF.ROLE2PATH[st.c.role]||'Body',save:g=>{ st.nas2=NAS2.save(g); save(); },back:()=>day()}); }
+function nasStartOld(){ G=st.nas?Object.assign(NAS.newGame(),st.nas,{rng:Math.random}):NAS.newGame(); if(NAS.active(G)!==0) NAS.endTurn(G); nasDraw(); }
 let nSel=null;
 function nasSave(){ const {rng,...rest}=G; st.nas=rest; save(); }
 function nasDraw(){ const me=G.players[0], reach=NAS.reachMarch(G,me);
@@ -242,5 +243,5 @@ function worldBattle(kind,npcId){ const q=qiState(), c=st.c, s=st.world, path=FF
   log([`Overworld: ${b.foe.name} L${b.foe.L} — ${b.result} in ${b.turn} turns`]); save(); return lines; },
   ()=>worldOpen()); }
 
-st.c?day():create();
+st.c?(location.hash==='#nascent'?nasStart():day()):create();
 </script></body></html>
