@@ -26,7 +26,7 @@ const KIT={Body:['Kick','Combat Insight','Flow Like Water','Focus Breathing'],Li
  Force:['Force Punch','Shock Dash','Momentum Strike','Afterimage Stance','Focus Breathing'],Mass:['Gravity Crush','Stone Skin','Earthen Renewal','Gravity Well','Focus Breathing']};
 // Technique library (character sheet). 2 permanent starters per path; others bought as manuals (affinity manual 150g, cultivation_07) or developed later (stub).
 const STARTERS={Body:['Kick','Combat Insight'],Force:['Force Punch','Shock Dash'],Light:['Light Bolt','Healing Light'],Mass:['Gravity Crush','Stone Skin']};
-const MANUAL_COST=150;
+const MANUAL_COST=60;
 function sheet(q,path){ q.techs=q.techs||{}; STARTERS[path].forEach(t=>{ if(!q.techs[t]) q.techs[t]={lv:1,starter:1}; });
   if(!Array.isArray(q.slots)) q.slots=STARTERS[path].slice(); q.slots=q.slots.filter(t=>q.techs[t]).slice(0,3); return q; }
 function learn(q,path,t){ sheet(q,path); if(q.techs[t]) return false; q.techs[t]={lv:1}; if(q.slots.length<3) q.slots.push(t); return true; }
