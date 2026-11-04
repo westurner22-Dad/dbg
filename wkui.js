@@ -1,4 +1,4 @@
-// p16 Weekend boss UI (DOM sprites over a CSS-tiled grid). Opened from day screen or #weekend.
+// p17 Weekend boss UI (DOM sprites over a CSS-tiled grid). Opened from day screen or #weekend.
 (function(){
 const $=s=>document.querySelector(s); let g,ui,opt,timerI;
 const ZO=[.8,1,1.3]; const TITLE={dmg:'Worldbreaker',pro:'The Unyielding',sus:'Beacon of Heaven',con:'Master of Fate'};
@@ -40,7 +40,7 @@ const CSS=`#wk{position:fixed;inset:0;background:radial-gradient(ellipse at top,
 .cmd{margin:4px 8px calc(8px + env(safe-area-inset-bottom));height:200px;flex:none;border:3px solid #e8ecff;border-radius:10px;background:linear-gradient(#2b3f9e,#121c5c);box-shadow:0 0 0 2px #000,0 6px 16px #000a;padding:8px 10px;box-sizing:border-box}
 .msg{font-size:13px;min-height:18px;color:#fff;text-shadow:0 1px 0 #000}.mn{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
 .mn button,.tl button{background:linear-gradient(#ffffff1a,#0000);border:1px solid #fff5;color:#fff;border-radius:8px;min-height:44px;font:700 15px system-ui;text-align:left;padding:4px 10px;text-shadow:0 1px 0 #000}
-.mn button:before{content:'▶ ';color:#fff0}.mn button:active:before{color:#fff}.mn button:disabled,.tl button:disabled{opacity:.4}
+#cX:before{content:none!important}.mn button:before{content:'▶ ';color:#fff0}.mn button:active:before{color:#fff}.mn button:disabled,.tl button:disabled{opacity:.4}
 .tl{display:flex;flex-direction:column;gap:4px;margin-top:3px;max-height:142px;overflow:auto}.tl button{display:flex;justify-content:space-between;align-items:center;gap:6px;min-height:42px;padding:2px 10px;font-size:14px}.tl small{display:block;font:400 11px system-ui;color:#cde;opacity:.9}.tl .mp{font:700 12px system-ui;color:#9df;white-space:nowrap}
 .ty{display:inline-block;font:700 9px system-ui;padding:1px 5px;border-radius:6px;margin-left:4px;vertical-align:middle}.ty.Body{background:#c84}.ty.Force{background:#c44}.ty.Light{background:#cb3;color:#000}.ty.Mass{background:#3a6}
 .wend{position:fixed;inset:0;z-index:70;background:#05060cf0;overflow:auto;padding:16px 14px 30px;box-sizing:border-box;animation:fl2 .5s}@keyframes fl2{from{opacity:0}}
@@ -106,7 +106,10 @@ function step(){ if(!g) return; if(g.over) return end(); const a=WK.advance(g); 
  play(()=>{ ui.mode='move'; ui.sel=null; ui.left=90; render(); clearT(); timerI=setInterval(()=>{ if(ui.busy) return; ui.left--; if(ui.left<=0){ clearT(); ui.mode='wait'; WK.block(g,a); play(step); } else { const t=$('#wtm'); if(t) t.textContent=ui.left+'s'; } },1000); }); }
 function tapTile(x,y){ if(ui.busy||!g||g.over) return; const a=WK.cur(g);
  if(ui.mode==='move'){ if(x===a.x&&y===a.y){ ui.sel=null; WK.moveTo(g,a,x,y); ui.mode='menu'; render(); return; } if(WK.reach(g,a).some(p=>p[0]===x&&p[1]===y)){ ui.sel=[x,y]; render(); } return; }
- if(ui.mode==='ally'){ const t=ui.allies.find(u=>u.x===x&&u.y===y); if(t) doAct(ui.tech,t); } }
+ if(ui.mode==='ally'){ const t=ui.allies.find(u=>u.x===x&&u.y===y); if(t) doAct(ui.tech,t); else cancel(); } }
+function techList(a){ return WK.menu(g,a).map((m,k)=>Object.assign({k},m)).filter(m=>m.t!=='Attack'); }
+function cancel(){ if(ui.busy||!g||g.over) return; if(ui.mode==='ally'){ ui.mode='tech'; render(); } else if(ui.mode==='tech'||ui.mode==='item'){ ui.mode='menu'; render(); } }
+document.addEventListener('keydown',e=>{ if(!g||!document.getElementById('wk')) return; if(e.key==='b'||e.key==='B'||e.key==='Escape'||e.key==='Backspace'){ e.preventDefault(); cancel(); } });
 function doAct(t,tgt){ const a=WK.cur(g); clearT(); ui.mode='wait'; WK.act(g,a,t,tgt); play(step); }
 function menuUI(){ const box=$('#wmn'); if(!box) return; const a=g&&WK.cur(g); if(!a||!a.me||ui.mode==='wait'||ui.busy||g.over){ box.innerHTML=''; return; }
  const hd=`<div style="display:flex;justify-content:space-between;font-size:11px;color:#bcf;margin-top:-2px"><span>${a.name} · ${a.role} <span class="ty ${a.path}">${a.path}</span>${WK.inTele(g,a.x,a.y)?' <b style="color:#f66">⚠ in the red zone!</b>':''}</span><span>⏱ <span id=wtm>${ui.left}s</span> → Block</span></div>`;
@@ -115,13 +118,14 @@ function menuUI(){ const box=$('#wmn'); if(!box) return; const a=g&&WK.cur(g); i
   h=`<div class=mn><button id=mOk ${ui.sel?'':'disabled'}>Move here</button><button id=mSt>Stay</button></div>`; }
  else if(ui.mode==='menu'){ say('<b>'+a.name+'</b>, choose an action.'); const atk=WK.menu(g,a)[0];
   h=`<div class=mn><button id=cF ${atk.ok?'':'disabled'}>Fight${atk.ok?'':' <small style="font-size:10px">('+atk.why+')</small>'}</button><button id=cT>Techniques</button><button id=cI>Item</button><button id=cB>Block</button></div>`; }
- else if(ui.mode==='tech'){ say('Techniques — your loadout (3 slots) plus Attack.'); h=`<div class=tl>`+WK.menu(g,a).map((m,i)=>`<button data-i=${i} ${m.ok?'':'disabled'}><span>${m.t}<small>${m.ok?(m.i.d||''):m.why}${m.i.rng?' · range '+m.i.rng:''}</small></span><span class=mp>${m.c?m.c+' MP':m.t==='Challenge'?'role':'free'}</span></button>`).join('')+`<button id=cX style="justify-content:center">◀ Back</button></div>`; }
- else if(ui.mode==='item'){ say('Items'); h=`<div class=tl>`+WK.items(g,a).map((m,i)=>`<button data-i=${i} ${m.ok?'':'disabled'}><span>${m.lab}</span></button>`).join('')+`<button id=cX style="justify-content:center">◀ Back</button></div>`; }
- else if(ui.mode==='ally'){ say('Tap a green-ringed ally for <b>'+ui.tech+'</b>.'); h=`<div class=mn><button id=cX>◀ Back</button></div>`; }
+ else if(ui.mode==='tech'){ say(ui.note||'Techniques — your 3 slotted techniques. Attack is Fight on the main menu.'); ui.note=null; h=`<div class=mn style="grid-template-columns:1fr"><button id=cX style="justify-content:center">◀ Back</button></div><div class=tl>`+techList(a).map(m=>`<button data-i=${m.k} class="${m.ok?'':'off'}" style="${m.ok?'':'opacity:.4'}"><span>${m.t}<small>${m.ok?(m.i.d||''):m.why}${m.i.rng?' · range '+m.i.rng:''}</small></span><span class=mp>${m.c?m.c+' MP':m.t==='Challenge'?'role':'free'}</span></button>`).join('')+`</div>`; }
+ else if(ui.mode==='item'){ say('Items'); h=`<div class=mn style="grid-template-columns:1fr"><button id=cX style="justify-content:center">◀ Back</button></div><div class=tl>`+WK.items(g,a).map((m,i)=>`<button data-i=${i} ${m.ok?'':'disabled'}><span>${m.lab}</span></button>`).join('')+`</div>`; }
+ else if(ui.mode==='ally'){ say('Tap a green-ringed ally for <b>'+ui.tech+'</b>. Tap empty ground, ◀ Back, or press B to cancel.'); h=`<div class=mn><button id=cX>◀ Back</button></div>`; }
  box.innerHTML=hd+h; const tap=(sel,f)=>box.querySelectorAll(sel).forEach(b=>b.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!b.disabled) f(b); }));
  tap('#mOk',()=>{ WK.moveTo(g,a,ui.sel[0],ui.sel[1]); ui.sel=null; ui.mode='menu'; play(()=>render()); }); tap('#mSt',()=>{ ui.sel=null; WK.moveTo(g,a,a.x,a.y); ui.mode='menu'; render(); });
  tap('#cF',()=>doAct('Attack')); tap('#cT',()=>{ ui.mode='tech'; render(); }); tap('#cI',()=>{ ui.mode='item'; render(); }); tap('#cB',()=>{ clearT(); ui.mode='wait'; WK.block(g,a); play(step); }); tap('#cX',()=>{ ui.mode='menu'; render(); });
- if(ui.mode==='tech') tap('.tl button[data-i]',b=>{ const m=WK.menu(g,a)[+b.dataset.i]; if(m.i.tg==='ally'){ ui.tech=m.t; ui.allies=WK.allyTargets(g,a,m.i.rng); ui.mode='ally'; render(); } else doAct(m.t); });
+ if(ui.mode==='tech') tap('.tl button[data-i]',b=>{ const m=WK.menu(g,a)[+b.dataset.i]; if(!m.ok){ ui.note='<b>'+m.t+'</b>: '+m.why+(m.why==='Out of range'?' — move closer next turn, or pick another action.':'.'); ui.mode='menu'; render(); say(ui.note); ui.note=null; return; }
+  if(m.i.tg==='ally'){ const al=WK.allyTargets(g,a,m.i.rng); if(!al.length){ ui.mode='menu'; render(); say('<b>'+m.t+'</b>: no ally in range.'); return; } ui.tech=m.t; ui.allies=al; ui.mode='ally'; render(); } else doAct(m.t); });
  if(ui.mode==='item') tap('.tl button[data-i]',b=>{ const m=WK.items(g,a)[+b.dataset.i]; clearT(); ui.mode='wait'; WK.item(g,a,m.k,m.tgt); play(step); }); }
 function end(){ clearT(); render(); const S=WK.scores(g), win=g.over==='win', ch=['dmg','pro','sus','con'], nm={dmg:'Damage',pro:'Protection',sus:'Sustain',con:'Control'}, col={dmg:'#f64',pro:'#6af',sus:'#5e8',con:'#c8f'};
  const m=S.mvp, top=ch.slice().sort((a,c)=>m.share[ch.indexOf(c)]-m.share[ch.indexOf(a)])[0]; const L=win?WK.loot(g):[];

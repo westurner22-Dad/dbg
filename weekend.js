@@ -1,4 +1,4 @@
-// p16 Weekend boss battle (Thunder Ape Monarch, Qi advancement). Engine is DOM-free (headless sim); UI at bottom.
+// p17 Weekend boss battle (Thunder Ape Monarch, Qi advancement). Engine is DOM-free (headless sim); UI at bottom.
 (function(root){
 const W=8,H=10;
 const MAP=['..h..h..','.m....m.','........','p..xx..p','..m..m..','.h.p..h.','........','m..h...m','........','........'];
