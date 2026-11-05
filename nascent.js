@@ -86,6 +86,7 @@ if(typeof document!=='undefined'){
   if(sel!=null&&ADJ[sel].includes(i)){ const r=attack(G,sel,i); show(r); if(r&&r.cap) sel=G.hex[i].a>=2?i:null; else if(G.hex[sel].a<2) sel=null; hooks.save(G); return draw(); } }
  function runAI(){ clearTimeout(tm); if(G.over||G.cur===G.human) return draw(); const r=aiStep(G); if(!r){ endTurn(G); hooks.save(G); msg=''; draw(); tm=setTimeout(runAI,ff?20:350); return; } show(r); draw(); tm=setTimeout(runAI,ff?30:420); }
  api.open=function(container,saved,h){ hooks=h; NAMES=h.names||['You','Green','Blue','Gold','Ruin']; el=container; G=saved?Object.assign(newGame(),saved,{rng:Math.random}):(()=>{ const g=newGame({path:h.path,maxRound:h.maxRound}); if(h.bonus) g.hex.forEach(x=>{ if(x.o===0) x.a+=h.bonus; }); startTurn(g); return g; })(); sel=gsel=null; msg=''; banner=''; draw(); runAI(); };
+ api.autoTurn=function(){ if(!G||G.over||G.cur!==G.human) return false; const h=G.human; G.human=-1; let n=0; while(n++<500&&aiStep(G)); G.human=h; sel=gsel=null; mv=null; endTurn(G); hooks.save(G); runAI(); return true; }; api.isMine=()=>G&&!G.over&&G.cur===G.human;
  api.save=g=>{ const {rng,...r}=g; return JSON.parse(JSON.stringify(r)); };
 }
 root.NAS2=api; if(typeof module!=='undefined') module.exports.NAS2=api;

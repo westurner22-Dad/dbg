@@ -110,7 +110,7 @@ function nTap(t){ const me=G.players[0]; if(G.own[t].o===0){ G.log.push(NAS.marc
 
 // ================= Hold the Line v2 (real-time lane, Age of War style) =================
 let hg=null, hLast=0, hRaf=0, hMsg='';
-function htl(){ const c=st.c; hg=HTL2.newGame(c.role,c.level,c.realmIdx||0); HTL2.startWave(hg); hMsg='Wave 1: the Collective marches from the right. Buy units with Sect Credit.'; htlView(); hLast=performance.now(); cancelAnimationFrame(hRaf); hRaf=requestAnimationFrame(htlLoop); }
+function htl(){ const c=st.c; hg=HTL2.newGame(c.role,c.level,st.demo?Math.max(0,(c.realmIdx||0)-1):(c.realmIdx||0)); if(st.demo) Demo.htlGear(hg); HTL2.startWave(hg); hMsg='Wave 1: the Collective marches from the right. Buy units with Sect Credit.'; htlView(); hLast=performance.now(); cancelAnimationFrame(hRaf); hRaf=requestAnimationFrame(htlLoop); }
 function htlView(){ const U=HTL2.UNITS;
  view(`<div class=row><span class=big>${HTL2.REALMS[hg.R]} ${hg.L} · Wave <span id=hw></span></span></div><div id=hs></div>
  <canvas id=cv width=1000 height=420></canvas><div class=tip id=hm></div>
