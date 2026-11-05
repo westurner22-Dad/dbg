@@ -20,7 +20,7 @@ function newBattle(o){ const p=FF.PATHS[o.path], L=o.L, rng=o.rng||Math.random;
   const me={name:o.name||'You',path:o.path,em:p.em,L,mx:Math.round(PB[o.path].hp*300*Math.max(1.05,p.hp)*1.45*sc(L)*(1+(o.gear||0))),mmp:Math.round(100*p.mp*sc(L)),atk:Math.round(80*p.atk*sc(L)*(1+(o.gear||0))),mat:Math.round(80*p.mat*sc(L)*(1+(o.gear||0))),spd:p.spd+1,shield:0,dr:0,crit:0,dodge:0,cd:{}};
   me.hp=Math.max(1,Math.round((o.hpFrac??1)*me.mx)); me.mp=Math.round((o.mpFrac??1)*me.mmp); me.moves=moves(o.path,L,o.slots);
   const B=o.trainer?Object.assign({},TRAINER_BEAST,{hp:REN[o.path][0],atk:REN[o.path][1]}):BEASTS[Math.floor(rng()*BEASTS.length)], bl=Math.max(1,L+(o.trainer?0:Math.floor(rng()*3)-1));
-  const foe={name:B.n,em:B.em,ty:B.ty,L:bl,mx:Math.round(420*B.hp*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),atk:Math.round(54*B.atk*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),spd:B.spd,mv:B.mv,slow:0}; foe.hp=foe.mx;
+  const foe={name:B.n,em:B.em,ty:B.ty,L:bl,mx:Math.round(420*B.hp*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),atk:Math.round(54*B.atk*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),spd:B.spd,mv:B.mv,slow:0}; foe.mx=Math.round(foe.mx*(globalThis.DEMO_K||1)); foe.atk=Math.round(foe.atk*(globalThis.DEMO_K||1)); foe.hp=foe.mx;
   return {me,foe,rng,turn:0,over:false,result:null,runs:0,bag:Object.assign({},o.bag||{}),trainer:!!o.trainer}; }
 const cost=(b,t)=>t==='Attack'?0:Math.round(FF.TECH[t].tier*.1*b.me.mmp);
 function dmgTo(b,base,pw,ty,defTy,lines,target){ const e=eff(ty,defTy); let d=base*pw*e*(0.85+b.rng()*.3); const crit=b.rng()<.0625; if(crit) d*=1.5; d=Math.max(1,Math.round(d)); return {d,e,crit}; }

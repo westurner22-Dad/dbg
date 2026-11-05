@@ -44,7 +44,7 @@ function squad(role,L,gear,slots){ const me=ROLE2PATH[role]||'Body', rest=['Body
 function enemies(t,b,rng){ const T=TERR[t], L=T.lv+Math.floor(b/2), n=3+Math.min(2,Math.floor((t+b)/2)), out=[];
   out.push(unit('Commissar '+['Wu','Lei','Kang','Mao','Zhen'][t],'Force',L+1,'E',{boss:1,em:'🎖️',t}));
   for(let i=1;i<n;i++){ const [nm,p,em]=ENEMY[Math.floor(rng()*ENEMY.length)]; out.push(unit(nm,p,L,'E',{em,t})); } return out; }
-function newBattle(o){ const rng=o.rng||Math.random; return {t:o.terr,bi:o.battle,L:o.L,P:squad(o.role,o.L,o.gear,o.slots),E:enemies(o.terr,o.battle,rng),rng,round:0,phase:'cmd',q:[],over:false,result:null,used:[],items:Object.assign({},o.items||{}),last:null}; }
+function newBattle(o){ const rng=o.rng||Math.random, E=enemies(o.terr,o.battle,rng), K=(globalThis.DEMO_K||1); if(K!==1) E.forEach(u=>['hp','mx','atk','mat'].forEach(k=>{ if(u[k]) u[k]=Math.round(u[k]*K); })); return {t:o.terr,bi:o.battle,L:o.L,P:squad(o.role,o.L,o.gear,o.slots),E,rng,round:0,phase:'cmd',q:[],over:false,result:null,used:[],items:Object.assign({},o.items||{}),last:null}; }
 const alive=a=>a.filter(u=>u.hp>0);
 function all(b){ return b.P.concat(b.E); }
 const byId=(b,id)=>all(b).find(u=>u.id===id);

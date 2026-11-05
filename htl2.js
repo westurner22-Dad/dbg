@@ -12,7 +12,7 @@ const EN={Conscript:{hp:1,hit:1,spd:45,cr:4,rng:20,col:'#c33'},Brigadier:{hp:.6,
 // support units (Sect Credit): hp x hero maxHP, dmg x hero dmg/turn
 const UNITS={Disciple:{cost:15,hp:.35,dmg:.25,rng:22,spd:55,col:'#4c4'},Archer:{cost:25,hp:.2,dmg:.3,rng:170,spd:50,col:'#4cf',back:45},
   Healer:{cost:30,hp:.25,dmg:.05,rng:120,spd:45,heal:.06,col:'#fff',back:75},General:{cost:120,hp:1.2,dmg:.8,rng:28,spd:40,aura:.2,col:'#fd0',realm:1}};
-const G=(L,R)=>(1000+60*(L-1))*Math.pow(10,R), E=(L,R)=>(120+10*L)*Math.pow(10,R);
+const G=(L,R)=>(globalThis.DEMO_K||1)*(1000+60*(L-1))*Math.pow(10,R), E=(L,R)=>(globalThis.DEMO_K||1)*(120+10*L)*Math.pow(10,R);
 function hero(role,L,R){ const [a,b,c,d]=PL[role], t=(L-1)/9; const bf=R<=1?1.25:1; return {hp:bf*(a+(c-a)*t)*Math.pow(10,R), dpt:bf*(b+(d-b)*t)*KIT[role]*Math.pow(10,R)}; }
 // wave budget: locked B(L)=18,000+1,500(L-1) at wave 1, then +35% per wave and x1.08 per level so the Collective eventually overwhelms
 const budget=(L,R,wave)=>Math.min(1,.55+.1*(L-1))*(18000+1500*(L-1))*Math.pow(1.10,L-1)*Math.pow(1.32,wave-1)*Math.pow(10,R);

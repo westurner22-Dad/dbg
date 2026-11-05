@@ -7,7 +7,7 @@ const xy=i=>[i%W,Math.floor(i/W)], id=(x,y)=>x<0||y<0||x>=W||y>=H?-1:y*W+x;
 function nb(i){ const [x,y]=xy(i), o=y%2; return [[-1,0],[1,0],[o-1,-1],[o,-1],[o-1,1],[o,1]].map(([dx,dy])=>id(x+dx,y+dy)).filter(j=>j>=0); }
 const ADJ=[...Array(N).keys()].map(nb);
 const HOMES=[[[0,0],[1,0],[0,1],[1,1],[0,2]],[[4,0],[3,0],[4,1],[3,1],[4,2]],[[0,7],[1,7],[0,6],[1,6],[0,5]],[[4,7],[3,7],[4,6],[3,6],[4,5]]].map(h=>h.map(([x,y])=>id(x,y)));
-const NAMES=['You','Green','Blue','Gold','Ruin'], COLS=['#ff8fb8','#7fe08a','#7fb8ff','#ffd66b','#8a8f9c'];
+let NAMES=['You','Green','Blue','Gold','Ruin'], COLS=['#ff8fb8','#7fe08a','#7fb8ff','#ffd66b','#8a8f9c'];
 const GT={D:'🛡️',A:'⚔️',S:'🧠'};
 function newGame(o={}){ const r=o.rng||Math.random, me=o.path||'Body', paths=[me].concat(['Body','Force','Light','Mass'].filter(p=>p!==me)).concat(['Body']);
   const hex=[...Array(N)].map((_,i)=>({o:RUIN,a:3+Math.floor(r()*3),home:-1,g:null}));
@@ -85,7 +85,7 @@ if(typeof document!=='undefined'){
   if(h.o===G.human){ sel=sel===i?null:i; msg=h.a<2?'Need 2+ armies to attack.':''; return draw(); }
   if(sel!=null&&ADJ[sel].includes(i)){ const r=attack(G,sel,i); show(r); if(r&&r.cap) sel=G.hex[i].a>=2?i:null; else if(G.hex[sel].a<2) sel=null; hooks.save(G); return draw(); } }
  function runAI(){ clearTimeout(tm); if(G.over||G.cur===G.human) return draw(); const r=aiStep(G); if(!r){ endTurn(G); hooks.save(G); msg=''; draw(); tm=setTimeout(runAI,ff?20:350); return; } show(r); draw(); tm=setTimeout(runAI,ff?30:420); }
- api.open=function(container,saved,h){ hooks=h; el=container; G=saved?Object.assign(newGame(),saved,{rng:Math.random}):(()=>{ const g=newGame({path:h.path}); startTurn(g); return g; })(); sel=gsel=null; msg=''; banner=''; draw(); runAI(); };
+ api.open=function(container,saved,h){ hooks=h; NAMES=h.names||['You','Green','Blue','Gold','Ruin']; el=container; G=saved?Object.assign(newGame(),saved,{rng:Math.random}):(()=>{ const g=newGame({path:h.path,maxRound:h.maxRound}); if(h.bonus) g.hex.forEach(x=>{ if(x.o===0) x.a+=h.bonus; }); startTurn(g); return g; })(); sel=gsel=null; msg=''; banner=''; draw(); runAI(); };
  api.save=g=>{ const {rng,...r}=g; return JSON.parse(JSON.stringify(r)); };
 }
 root.NAS2=api; if(typeof module!=='undefined') module.exports.NAS2=api;

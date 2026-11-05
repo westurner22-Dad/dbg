@@ -17,8 +17,9 @@ function create(o){ o=o||{}; const g={seed:o.seed||((Math.random()*1e9)|0),round
  const me=o.path||'Body'; const paths=[me].concat(['Body','Force','Light','Mass'].filter(p=>p!==me));
  const starts=[[2,8],[5,8],[1,9],[6,9]];
  g.units=paths.map((p,i)=>{ const d=P[p]; return {id:'u'+i,me:i===0,path:p,role:d.role,name:i===0?(o.name||'You'):d.nm,img:d.img,x:starts[i][0],y:starts[i][1],mx:d.hp,hp:d.hp,mmp:d.mmp,mp:d.mmp,atk:d.atk,mat:d.mat,spd:d.spd,mv:d.mv,rng:d.rng,
-  techs:i===0?techsFor(p,o.slots):techsFor(p),cd:{},buf:{},down:false,potions:1,sc:{dmg:0,pro:0,sus:0,con:0}}; });
- g.boss={id:'boss',x:3,y:1,hp:BOSS.hp,mx:BOSS.hp,spd:BOSS.spd,mv:BOSS.mv,hitR:{},taunt:null};
+  techs:i===0?techsFor(p,o.slots):techsFor(p,o.allies&&o.allies[p]&&o.allies[p].techs),cd:{},buf:{},down:false,potions:1,sc:{dmg:0,pro:0,sus:0,con:0}}; });
+ g.units.forEach(u=>{ const al=o.allies&&o.allies[u.path]; if(!u.me&&al&&al.name) u.name=al.name; const m=1+((u.me?o.gear:al&&al.gear)||0); if(m!==1) ['mx','hp','atk','mat'].forEach(k=>u[k]=Math.round(u[k]*m)); });
+ const BH=Math.round(BOSS.hp*(globalThis.DEMO_K||1)); g.boss={id:'boss',x:3,y:1,hp:BH,mx:BH,spd:BOSS.spd,mv:BOSS.mv,hitR:{},taunt:null};
  newRound(g); return g; }
 const alive=g=>g.units.filter(u=>!u.down);
 const bossCells=b=>[[b.x,b.y],[b.x+1,b.y],[b.x,b.y+1],[b.x+1,b.y+1]];
@@ -79,7 +80,7 @@ function items(g,u){ const l=[]; l.push({k:'Potion',ok:u.potions>0&&u.hp<u.mx,la
 function moveTo(g,u,x,y){ if(x!==u.x||y!==u.y){ u.x=x; u.y=y; g.ev.push({t:'move',id:u.id}); } u.moved=true; }
 // ---- Boss
 function avgHit(g){ return 330*PCT.slam; }
-function bossHit(g,u,pct,name){ const b=g.boss; let v=u.mx*pct*(g.phase===2?1.2:1)*(g.slow>0?.75:1); if(g.round>=15) v/=.6; else v=Math.min(v,u.mx*.25);
+function bossHit(g,u,pct,name){ const b=g.boss; let v=(globalThis.DEMO_K||1)*u.mx*pct*(g.phase===2?1.2:1)*(g.slow>0?.75:1); if(g.round>=15) v/=.6; else v=Math.min(v,u.mx*.25);
  if(g.slow>0){ const s=g.units.find(x=>x.role==='Controller'); if(s) s.sc.con+=Math.round(v/3); }
  if(name!=='Storm Burst'&&(u.buf.dodge||(u.buf.dodge25>0&&R(g)<.25))){ u.buf.dodge=0; u.sc.pro+=Math.round(v); g.ev.push({t:'msg',s:u.name+' dodges '+name+'!'},{t:'fx',id:u.id,k:'dodge'}); b.hitR[u.id]=1; return; }
  b.hitR[u.id]=(b.hitR[u.id]||0)+1; hurt(g,u,Math.round(v),name); }
