@@ -35,16 +35,16 @@ const ITEMS={'Healing Potion':{cost:25,d:'Restore 50% max HP'},'Focus Crystal':{
 const ENEMY=[['Red Guard','Body','💂'],['Iron Commissar','Force','👺'],['Propaganda Monk','Light','📢'],['Hex Clerk','Mass','🧾'],['Tractor Brute','Force','🚜']];
 const TERR=[{n:'Ironleaf Valley',lv:1},{n:'Rustwater Ford',lv:3},{n:'Red Banner Hills',lv:5},{n:'Commissar Peaks',lv:7},{n:'Black Bell Capital',lv:9}];
 let uid=0;
-function unit(name,path,L,side,o={}){ const p=PATHS[path], g=o.gear||0, f=side==='E'?.8+.06*(o.t||0):1, hp=Math.round(300*p.hp*sc(L)*(1+g)*(o.boss?1.6:f)*(side==='E'?1:1.25)), mp=Math.round(100*p.mp*sc(L));
-  return {id:++uid,name,path,side,L,em:o.em||p.em,leader:!!o.boss,hp,mx:hp,mp,mmp:mp,atk:Math.round(80*p.atk*sc(L)*(1+g)*(L>=5&&path==='Body'?1.06:1)),mat:Math.round(80*p.mat*sc(L)*(1+g)),
-   spd:p.spd+(side==='E'?0:1),techs:side==='P'?KIT[path].filter(t=>TECH[t].lv<=L):[],cd:{},shield:0,dr:0,regen:0,dodge:0,dodge25:0,crit:0,slow:0}; }
+function unit(name,path,L,side,o={}){ const p=PATHS[path], GO=o.gear&&typeof o.gear==='object'?o.gear:null, g=GO?GO.hp||0:o.gear||0, ga=GO?GO.atk||0:g, gm=GO?GO.mat||0:g, f=side==='E'?.8+.06*(o.t||0):1, hp=Math.round(300*p.hp*sc(L)*(1+g)*(o.boss?1.6:f)*(side==='E'?1:1.25)), mp=Math.round(100*p.mp*sc(L)*(1+(GO?GO.mp||0:0)));
+  return {id:++uid,name,path,side,L,em:o.em||p.em,leader:!!o.boss,hp,mx:hp,mp,mmp:mp,atk:Math.round(80*p.atk*sc(L)*(1+ga)*(L>=5&&path==='Body'?1.06:1)),mat:Math.round(80*p.mat*sc(L)*(1+gm)),
+   spd:p.spd+(side==='E'?0:1)+(GO?GO.spd||0:0),techs:side==='P'?KIT[path].filter(t=>TECH[t].lv<=L):[],cd:{},shield:0,dr:0,regen:0,dodge:0,dodge25:0,crit:0,slow:0}; }
 const cost=(u,t)=>Math.round(TECH[t].tier*.1*u.mmp);
-function squad(role,L,gear,slots){ const me=ROLE2PATH[role]||'Body', rest=['Body','Force','Light','Mass'].filter(x=>x!==me);
-  const nm={Body:'Tiezhu',Force:'Shanmei',Light:'Lumen',Mass:'Zhong'}; return [Object.assign(unit('You',me,L,'P',{gear}),slots?{techs:slots.concat('Focus Breathing')}:{})].concat(rest.map(p=>unit(nm[p],p,L,'P'))); }
+function squad(role,L,gear,slots,allyG){ const me=ROLE2PATH[role]||'Body', rest=['Body','Force','Light','Mass'].filter(x=>x!==me);
+  const nm={Body:'Tiezhu',Force:'Shanmei',Light:'Lumen',Mass:'Zhong'}; return [Object.assign(unit('You',me,L,'P',{gear}),slots?{techs:slots.concat('Focus Breathing')}:{})].concat(rest.map(p=>unit(nm[p],p,L,'P',{gear:allyG&&allyG[p]}))); }
 function enemies(t,b,rng){ const T=TERR[t], L=T.lv+Math.floor(b/2), n=3+Math.min(2,Math.floor((t+b)/2)), out=[];
   out.push(unit('Commissar '+['Wu','Lei','Kang','Mao','Zhen'][t],'Force',L+1,'E',{boss:1,em:'🎖️',t}));
   for(let i=1;i<n;i++){ const [nm,p,em]=ENEMY[Math.floor(rng()*ENEMY.length)]; out.push(unit(nm,p,L,'E',{em,t})); } return out; }
-function newBattle(o){ const rng=o.rng||Math.random, E=enemies(o.terr,o.battle,rng), K=(globalThis.DEMO_K||1); if(K!==1) E.forEach(u=>['hp','mx','atk','mat'].forEach(k=>{ if(u[k]) u[k]=Math.round(u[k]*K); })); return {t:o.terr,bi:o.battle,L:o.L,P:squad(o.role,o.L,o.gear,o.slots),E,rng,round:0,phase:'cmd',q:[],over:false,result:null,used:[],items:Object.assign({},o.items||{}),last:null}; }
+function newBattle(o,allyG){ const rng=o.rng||Math.random, E=enemies(o.terr,o.battle,rng), K=(globalThis.DEMO_K||1); if(K!==1) E.forEach(u=>['hp','mx','atk','mat'].forEach(k=>{ if(u[k]) u[k]=Math.round(u[k]*K); })); return {t:o.terr,bi:o.battle,L:o.L,P:squad(o.role,o.L,o.gear,o.slots,allyG||o.allyG),E,rng,round:0,phase:'cmd',q:[],over:false,result:null,used:[],items:Object.assign({},o.items||{}),last:null}; }
 const alive=a=>a.filter(u=>u.hp>0);
 function all(b){ return b.P.concat(b.E); }
 const byId=(b,id)=>all(b).find(u=>u.id===id);

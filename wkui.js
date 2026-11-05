@@ -44,7 +44,7 @@ const CSS=`#wk{position:fixed;inset:0;background:radial-gradient(ellipse at top,
 .tl{display:flex;flex-direction:column;gap:4px;margin-top:3px;max-height:142px;overflow:auto}.tl button{display:flex;justify-content:space-between;align-items:center;gap:6px;min-height:42px;padding:2px 10px;font-size:14px}.tl small{display:block;font:400 11px system-ui;color:#cde;opacity:.9}.tl .mp{font:700 12px system-ui;color:#9df;white-space:nowrap}
 .ty{display:inline-block;font:700 9px system-ui;padding:1px 5px;border-radius:6px;margin-left:4px;vertical-align:middle}.ty.Body{background:#c84}.ty.Force{background:#c44}.ty.Light{background:#cb3;color:#000}.ty.Mass{background:#3a6}
 .wend{position:fixed;inset:0;z-index:70;background:#05060cf0;overflow:auto;padding:16px 14px 30px;box-sizing:border-box;animation:fl2 .5s}@keyframes fl2{from{opacity:0}}
-.wend h1{margin:6px 0 2px;text-align:center;font:900 34px system-ui;color:#ffe27a;text-shadow:0 0 18px #f90,0 3px 0 #000}.wend h1.lose{color:#9ab;text-shadow:0 0 14px #48f}
+.ruin .wbi,.ruin img[src$='ape.png'],.ruin [style*='ape.png']{filter:grayscale(1) sepia(.6) hue-rotate(-40deg) saturate(3) brightness(.75) contrast(1.3)}.wend h1{margin:6px 0 2px;text-align:center;font:900 34px system-ui;color:#ffe27a;text-shadow:0 0 18px #f90,0 3px 0 #000}.wend h1.lose{color:#9ab;text-shadow:0 0 14px #48f}
 .mvp{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,#4a3410,#1c1406);border:2px solid #fc6;border-radius:12px;padding:10px;margin:12px 0;box-shadow:0 0 18px #fc64}.mvp img{height:84px;image-rendering:pixelated;filter:drop-shadow(0 0 8px #fc6)}
 .sct{width:100%;border-collapse:collapse;font-size:12px}.sct td{padding:4px 2px}.sct .b{height:7px;background:#223;border-radius:4px;overflow:hidden;min-width:44px}.sct .b i{display:block;height:100%}
 .chest{width:92px;height:66px;margin:14px auto 6px;position:relative;cursor:pointer}.chest .lid,.chest .box{position:absolute;left:0;right:0;background:linear-gradient(#a0612a,#6b3a14);border:3px solid #ffd15a;border-radius:8px;box-shadow:inset 0 0 0 3px #0003}
@@ -52,14 +52,14 @@ const CSS=`#wk{position:fixed;inset:0;background:radial-gradient(ellipse at top,
 .wlt{display:flex;align-items:center;gap:6px;background:#ffffff0d;border:1px solid #fff2;border-radius:8px;padding:6px;margin:5px 0;font-size:12px}.wlt .q{font-weight:800}.wlt button{min-height:44px;min-width:50px;font-size:12px;border-radius:8px;border:1px solid #fff4;background:#234;color:#fff;font-weight:700}
 .q.Rare{color:#6af}.q.Epic{color:#c7f}.q.Legendary{color:#fa4}.q.Manual{color:#7e9}.q.Treasure{color:#fd6}
 .wbt{display:block;width:100%;min-height:50px;margin-top:10px;border-radius:12px;border:2px solid #fff6;background:linear-gradient(#3b56d0,#1b2a80);color:#fff;font:800 16px system-ui}`;
-const sp=u=>u.id==='boss'?'img/ape.png':'img/'+u.img+'.png';
+const sp=u=>u.id==='boss'?'img/ape.png':u.me&&opt&&opt.meImg?opt.meImg:'img/'+u.img+'.png';
 function T(){ const bw=document.querySelector('#bw'); const aw=Math.min(innerWidth,520)-16, ah=bw?bw.clientHeight-6:440; return Math.floor(Math.min(aw/8,ah/10,64)*ZO[ui.z]); }
 function open(o){ opt=o||{}; if(!$('#wkcss')){ const s=document.createElement('style'); s.id='wkcss'; s.textContent=CSS; document.head.appendChild(s); }
  g=WK.create({path:opt.path,slots:opt.slots,name:opt.name,allies:opt.allies,gear:opt.gear}); ui={z:1,mode:'wait',sel:null,auto:false,busy:false}; 
- const el=document.createElement('div'); el.id='wk'; el.innerHTML=`<div class=wtop><div class=wbi></div><div style="flex:1;min-width:0"><div class=wbn><span>Thunder Ape Monarch</span><span id=wbh></span></div><div class=wbar><i id=wbf></i><b></b></div><div class=wsub><span id=wrd></span><span id=wph></span></div></div>
+ const el=document.createElement('div'); el.id='wk'; if(opt&&opt.skin) el.className='ruin'; el.innerHTML=SK(`<div class=wtop><div class=wbi></div><div style="flex:1;min-width:0"><div class=wbn><span>Thunder Ape Monarch</span><span id=wbh></span></div><div class=wbar><i id=wbf></i><b></b></div><div class=wsub><span id=wrd></span><span id=wph></span></div></div>
  </div><div style="display:flex;align-items:center;padding:0 8px 4px 0"><div class=word id=word style="flex:1"></div><button class=wx id=zout>－</button><button class=wx id=zin>＋</button><button class=wx id=wauto style="font-size:11px">AUTO</button><button class=wx id=wq>✕</button></div>
  <div class=bw id=bw><div class=bd id=bd></div></div>
- <div class=wpt id=wpt></div><div class=cmd id=cmd><div class=msg id=wmsg></div><div id=wmn></div></div>`;
+ <div class=wpt id=wpt></div><div class=cmd id=cmd><div class=msg id=wmsg></div><div id=wmn></div></div>`);
  document.body.appendChild(el);
  const tap=(id,f)=>$('#'+id).addEventListener('pointerdown',e=>{e.preventDefault();f();});
  tap('zin',()=>{ ui.z=Math.min(2,ui.z+1); build(); }); tap('zout',()=>{ ui.z=Math.max(0,ui.z-1); build(); });
@@ -84,8 +84,9 @@ function render(){ if(!g) return; const t=T(), b=g.boss, a=WK.cur(g);
   el.querySelector('.ic').textContent=u===b?'':((u.buf.shield>0?'🛡':'')+(u.buf.dr>0?'🪨':'')+(u.buf.regen>0?'✚':'')+(u.buf.crit?'✦':'')); });
  $('#wpt').innerHTML=g.units.map(u=>`<div class="wpc ${u===a?'on':''} ${u.down?'dn':''}"><div class=av style="background-image:url(${sp(u)})"></div><div style="flex:1;min-width:0"><div class=wnm>${u.me?'★ ':''}${u.name}</div><div class=mb><i style="width:${100*u.hp/u.mx}%;background:${u.hp/u.mx<.3?'#f44':'#4d4'}"></i></div><div class=mb><i style="width:${100*u.mp/u.mmp}%;background:#4af"></i></div><div style="color:#bcd">${u.hp}/${u.mx}</div></div></div>`).join('');
  menuUI(); }
-function say(s){ const m=$('#wmsg'); if(m) m.innerHTML=s; }
-function banner(s){ const b=document.createElement('div'); b.className='wban'; b.textContent=s; document.body.appendChild(b); setTimeout(()=>b.remove(),1700); }
+const SK=s=>opt&&opt.skin?opt.skin.reduce((a,[f,t])=>a.split(f).join(t),String(s)):s;
+function say(s){ const m=$('#wmsg'); if(m) m.innerHTML=SK(s); }
+function banner(s){ const b=document.createElement('div'); b.className='wban'; b.textContent=SK(s); document.body.appendChild(b); setTimeout(()=>b.remove(),1700); }
 function pos(id){ const u=id==='boss'?g.boss:g.units.find(x=>x.id===id), t=T(), sz=id==='boss'?2:1; return [u.x*t+sz*t/2,u.y*t]; }
 function float(id,v,cls){ const [x,y]=pos(id), f=document.createElement('div'); f.className='fn '+cls; f.textContent=v; f.style.left=x+'px'; f.style.top=y+'px'; $('#bd').appendChild(f); setTimeout(()=>f.remove(),1000); }
 function cls(id,c,ms){ const el=$('#U'+id); if(!el) return; el.classList.remove(c); void el.offsetWidth; el.classList.add(c); setTimeout(()=>el.classList.remove(c),ms||400); }
@@ -129,11 +130,11 @@ function menuUI(){ const box=$('#wmn'); if(!box) return; const a=g&&WK.cur(g); i
  if(ui.mode==='item') tap('.tl button[data-i]',b=>{ const m=WK.items(g,a)[+b.dataset.i]; clearT(); ui.mode='wait'; WK.item(g,a,m.k,m.tgt); play(step); }); }
 function end(){ clearT(); render(); const S=WK.scores(g), win=g.over==='win', ch=['dmg','pro','sus','con'], nm={dmg:'Damage',pro:'Protection',sus:'Sustain',con:'Control'}, col={dmg:'#f64',pro:'#6af',sus:'#5e8',con:'#c8f'};
  const m=S.mvp, top=ch.slice().sort((a,c)=>m.share[ch.indexOf(c)]-m.share[ch.indexOf(a)])[0]; const L=win?WK.loot(g):[]; opt.onEnd&&opt.onEnd({result:g.over,rounds:g.round,scores:S,mvp:m.u.name,meMvp:!!m.u.me});
- const e=document.createElement('div'); e.className='wend'; e.innerHTML=`<h1 class="${win?'':'lose'}">${win?'VICTORY':g.over==='escape'?'IT ESCAPED':'DEFEATED'}</h1><div style="text-align:center;color:#bcd">${win?'Thunder Ape Monarch defeated in '+g.round+' rounds · party advances · +175 gold':'The Monarch survives — Sunday’s attempt continues the fight.'}</div>
+ const e=document.createElement('div'); e.className='wend'; e.innerHTML=SK(`<h1 class="${win?'':'lose'}">${win?'VICTORY':g.over==='escape'?'IT ESCAPED':'DEFEATED'}</h1><div style="text-align:center;color:#bcd">${win?'Thunder Ape Monarch defeated in '+g.round+' rounds · party advances · +175 gold':'The Monarch survives — Sunday’s attempt continues the fight.'}</div>
  <div class=mvp><img src="${sp(m.u)}"><div><div style="font:700 11px system-ui;color:#fc6;letter-spacing:2px">MVP</div><div style="font:900 20px system-ui">${m.u.name}</div><div style="color:#fd9">“${TITLE[top]}” · ${m.u.role}</div><div style="font-size:12px;color:#cba">${Math.round(m.total*100)}% of the party’s contribution</div></div></div>
  <table class=sct><tr style="color:#9ab;font-size:11px"><td></td>${ch.map(k=>`<td>${nm[k]}</td>`).join('')}</tr>${S.rows.map(r=>`<tr><td style="white-space:nowrap"><img src="${sp(r.u)}" style="height:22px;vertical-align:middle"> ${r.u.me?'★':''}${r.u.name}</td>${r.share.map((s,i)=>`<td><div class=b><i style="width:${Math.round(s*100)}%;background:${col[ch[i]]}"></i></div><span style="font-size:10px;color:#9ab">${r.u.sc[ch[i]]}</span></td>`).join('')}</tr>`).join('')}</table>
  ${win?`<div class=chest id=chest><div class=box></div><div class=lid></div></div><div style="text-align:center;font-size:12px;color:#bcd" id=chh>Tap the chest</div><div id=lootl></div>`:''}
- <button class=wbt id=again>Fight again</button><button class=wbt id=back style="background:#333">Back to day</button>`; document.body.appendChild(e);
+ <button class=wbt id=again>Fight again</button><button class=wbt id=back style="background:#333">Back to day</button>`); document.body.appendChild(e);
  const tap=(s,f)=>{ const b=e.querySelector(s); b&&b.addEventListener('pointerdown',ev=>{ev.preventDefault();f(b);}); };
  tap('#again',()=>{ e.remove(); $('#wk').remove(); open(opt); }); tap('#back',()=>close());
  tap('#chest',c=>{ if(c.classList.contains('op')) return; c.classList.add('op'); $('#chh').textContent='Need / Greed — Need beats Greed, d100';

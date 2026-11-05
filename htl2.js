@@ -30,8 +30,8 @@ function buy(g,k){ const u=UNITS[k]; if(u.realm&&g.R<u.realm) return 'General un
 function tech(g,n){ const h=g.hero; if(h.ko) return 'Knocked out'; if(n===1){ if(h.t1>0) return 'Cooling down'; h.t1=10; // Burst: 3x dmg to all in range
     g.foes.filter(f=>Math.abs(f.x-h.x)<=200).forEach(f=>dmg(g,f,h.dpt*3/TURN*TURN)); g.fx.push({x:h.x,t:.4,c:'#ff0'}); return 'Burst!'; }
   if(h.t2>0) return 'Cooling down'; h.t2=20; h.hp=Math.min(h.mx,h.hp+.35*h.mx); g.allies.forEach(a=>a.hp=Math.min(a.mx,a.hp+.35*a.mx)); g.fx.push({x:h.x,t:.4,c:'#4f4'}); return 'Rally: +35% HP'; }
-function dmg(g,f,d){ f.hp-=d*(1-(EN[f.k].dr||0)); if(f.hp<=0&&!f.dead){ f.dead=true; const c=EN[f.k].cr; g.credit+=c; g.earned+=c; g.kills++; } }
-function step(g,dt){ if(g.waveOver) return; g.t+=dt; const h=g.hero, L=g.L, R=g.R;
+function dmg(g,f,d){ f.ht=.18; f.hp-=d*(1-(EN[f.k].dr||0)); if(f.hp<=0&&!f.dead){ f.dead=true; const c=EN[f.k].cr; g.credit+=c; g.earned+=c; g.kills++; } }
+function step(g,dt){ if(g.waveOver) return; g.t+=dt; const h=g.hero, L=g.L, R=g.R; g.foes.forEach(f=>{ if(f.ht>0) f.ht-=dt; }); [h,...g.allies].forEach(b=>{ if(b.hl>0) b.hl-=dt; });
   while(g.queue.length&&g.queue[0].at<=g.t){ const k=g.queue.shift().k, e=EN[k]; g.foes.push({k,x:SPAWN_X,hp:e.hp*G(L,R),mx:e.hp*G(L,R),cd:0,slow:0}); }
   const aura=g.foes.some(f=>EN[f.k].aura)?1.35:1;
   // hero
@@ -43,10 +43,12 @@ function step(g,dt){ if(g.waveOver) return; g.t+=dt; const h=g.hero, L=g.L, R=g.
   // allies
   for(const a of g.allies){ const u=UNITS[a.k]; a.cd-=dt; const tg=g.foes.filter(f=>f.x>=a.x-5&&f.x-a.x<=u.rng).sort((x,y)=>x.x-y.x)[0];
     const gen=g.allies.some(b=>b.k==='General'&&Math.abs(b.x-a.x)<150)?1.2:1;
-    if(u.heal&&a.cd<=0){ const w=[h,...g.allies].filter(b=>b.hp<b.mx&&Math.abs(b.x-a.x)<=u.rng&&!(b===h&&h.ko>0)).sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0]; if(w){ w.hp=Math.min(w.mx,w.hp+u.heal*h.mx); a.cd=TURN; } }
+    const heroHurt=h.ko<=0&&h.hp<h.mx-1, hurt=g.allies.filter(b=>b!==a&&b.hp<b.mx-1).sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0];
+    if(u.heal&&a.cd<=0){ // p20: hero first; if the hero is full, heal the most-hurt unit
+      const w=heroHurt&&Math.abs(h.x-a.x)<=u.rng?h:hurt&&Math.abs(hurt.x-a.x)<=u.rng?hurt:null; if(w){ w.hp=Math.min(w.mx,w.hp+u.heal*h.mx); a.cd=TURN; w.hl=.3; } }
     if(tg){ if(a.cd<=0&&!u.heal){ dmg(g,tg,1.25*u.dmg*h.dpt*gen); a.cd=TURN; } else if(u.heal&&a.cd<=0){ dmg(g,tg,u.dmg*h.dpt); a.cd=TURN; } }
     if(u.back){ // back line: hold behind frontmost melee ally (or hero), never lead; pass freely through hero
-      const mel=g.allies.filter(b=>!UNITS[b.k].back).map(b=>b.x); const anc=mel.length?Math.max(...mel):(h.ko>0?GATE_X+60:h.x);
+      const mel=g.allies.filter(b=>!UNITS[b.k].back).map(b=>b.x); let anc=mel.length?Math.max(...mel):(h.ko>0?GATE_X+60:h.x); if(u.heal){ if(heroHurt) anc=Math.min(anc,h.x)+u.back-40; else if(hurt) anc=hurt.x+u.back-40; }
       const want=Math.max(GATE_X+10,anc-u.back), d=want-a.x; if(Math.abs(d)>2) a.x+=Math.sign(d)*Math.min(Math.abs(d),u.spd*dt); }
     else if(!tg){ const blocker=g.foes.some(f=>f.x>a.x&&f.x-a.x<u.rng); if(!blocker) a.x=Math.min(LANE-40,a.x+u.spd*dt); } }
   // foes
@@ -70,6 +72,6 @@ function ai(g){ const h=g.hero; h.move=h.x<150?1:h.x>220?-1:0;
   if(g.R>=1&&g.credit>=150&&!g.allies.some(a=>a.k==='General')) buy(g,'General');
   else if(g.credit>=40){ const n=g.allies.length; buy(g,n%4===3?'Healer':n%2?'Archer':'Disciple'); }
   if(h.t1<=0&&g.foes.some(f=>Math.abs(f.x-h.x)<200)) tech(g,1); if(h.t2<=0&&h.hp<.5*h.mx) tech(g,2); }
-root.HTL2={LANE,GATE_X,EN,UNITS,REALMS,newGame,startWave,step,buy,tech,waveRow,ai,hero};
+root.HTL2={TURN,LANE,GATE_X,EN,UNITS,REALMS,newGame,startWave,step,buy,tech,waveRow,ai,hero};
 if(typeof module!=='undefined') module.exports=root.HTL2;
 })(typeof window!=='undefined'?window:globalThis);

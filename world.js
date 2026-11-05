@@ -46,6 +46,7 @@ function A(){ if(txt) return closeTxt(); if(busy||mv) return; const [fx,fy]=face
   if(n){ const back={up:'down',down:'up',left:'right',right:'left'}[w.dir]; w.npc[n.id].dir=back; const custom=hooks.talk&&hooks.talk(n.id);
     if(n.trainer&&!w.beaten[n.id]) return trainerFight(n); return say(custom||(n.trainer?n.after:n.line)); }
   if(tile(fx,fy)==='R'||tile(w.x,w.y)==='R') { w.hp=null; w.pk=null; save(); return say('You pray at the shrine. Your cultivator is fully restored!',()=>hooks.menu&&(stop(),hooks.menu('shrine'))); }
+  const pk=hooks.poke&&hooks.poke(fx,fy,tile(fx,fy)); if(pk) return say(pk);
   if(tile(fx,fy)==='D') return say('The door is locked. (Interiors come later.)'); }
 function B(){ if(txt) return closeTxt(); if(busy||mv) return; if(hooks.menu){ stop(); return hooks.menu('menu'); } say('Menu: A to keep exploring.  Progress saves automatically. (Leave with the ✕ button.)'); }
 function step(){ if(mv||txt||busy||!held) return; const d=held; const [dx,dy]=DIRS[d];
@@ -73,7 +74,7 @@ function draw(){ const T=32, VW=cv.width/T, VH=cv.height/T; let px=w.x, py=w.y;
   cx.textAlign='center'; cx.font='26px serif';
   for(const n of NPCS){ const p=w.npc[n.id]; let nx=p.x,ny=p.y; if(p.mv){ p.mv.t+=1/60; const k=Math.min(1,p.mv.t/.2); nx=p.x-p.mv.dx*(1-k); ny=p.y-p.mv.dy*(1-k); if(k>=1) p.mv=null; }
     const sx=(nx-ox)*T+16, sy=(ny-oy)*T+26; cx.fillText(n.em,sx,sy); if(p.alert){ cx.fillStyle='#fff'; cx.fillRect(sx-7,sy-50,14,18); cx.fillStyle='#d00'; cx.font='bold 16px sans-serif'; cx.fillText('!',sx,sy-36); cx.font='26px serif'; } }
-  const bob=mv&&!mv.turn?Math.sin(mv.t/mv.dur*Math.PI)*(mv.dur>.3?10:2):0; cx.fillText('🧑‍🎤',(px-ox)*T+16,(py-oy)*T+26-bob);
+  const bob=mv&&!mv.turn?Math.sin(mv.t/mv.dur*Math.PI)*(mv.dur>.3?10:2):0; const pim=hooks.sprite&&hooks.sprite(); if(pim){ const hh=40, ww=hh*pim.width/pim.height; cx.drawImage(pim,(px-ox)*T+16-ww/2,(py-oy)*T+30-hh-bob,ww,hh); } else cx.fillText('🧑‍🎤',(px-ox)*T+16,(py-oy)*T+26-bob);
   cx.fillStyle='#fff'; cx.font='bold 12px sans-serif'; const arrow={up:'▲',down:'▼',left:'◀',right:'▶'}[w.dir]; cx.fillText(arrow,(px-ox)*T+16,(py-oy)*T+38); cx.textAlign='left'; }
 function frame(dt){ if(mv){ mv.t+=dt; if(mv.t>=mv.dur){ const turned=mv.turn; mv=null; if(!turned) arrive(); } } step(); draw(); }
 let last=0; function loop(now){ frame(Math.min(.05,(now-last)/1000)); last=now; raf=requestAnimationFrame(loop); }

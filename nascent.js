@@ -38,13 +38,13 @@ function aiMove(G,p){ let moved=0; G.hex.forEach((h,i)=>{ if(h.o!==p||h.a<2||bor
 function moveGen(G,p,f,t){ const a=G.hex[f], b=G.hex[t]; if(a.o!==p||b.o!==p||!a.g||b.g) return false; b.g=a.g; a.g=null; return true; }
 const count=(G,p)=>G.hex.filter(h=>h.o===p).length, armies=(G,p)=>G.hex.reduce((s,h)=>s+(h.o===p?h.a:0),0);
 function aiMoves(G,p){ // greedy: best odds adjacent attack; Ruin mostly defends
-  let best=null; G.hex.forEach((h,i)=>{ if(h.o!==p||h.a<3) return; ADJ[i].forEach(t=>{ const d=G.hex[t]; if(d.o===p) return; if(p===RUIN&&d.home>=0) return;
-    const v=h.a-d.a-(d.home>=0?6:0)+(d.o===RUIN?1:0); if(!best||v>best.v) best={f:i,t,v}; }); });
+  if(p===RUIN&&G.ruinEnd) return null; let best=null; G.hex.forEach((h,i)=>{ if(h.o!==p||h.a<3) return; ADJ[i].forEach(t=>{ const d=G.hex[t]; if(d.o===p) return; if(p===RUIN&&d.home>=0) return;
+    const v=h.a-d.a-(d.home>=0?6:0)+(d.o===RUIN?(G.ruinEnd?3:1):0); if(!best||v>best.v) best={f:i,t,v}; }); });
   return best&&best.v>=(p===RUIN?4:1)?best:null; }
 function aiTurn(G,p){ const out=[]; if(!G.mob[p]&&p!==RUIN&&count(G,p)<=6&&G.round>=3) out.push({mob:1});
   const lim=p===RUIN?(G.rng()<.35?1:0):6; return {lim,out}; }
 function startTurn(G){ G.phase='attack'; G.moved=0; regen(G,G.cur); G.attacksLeft=G.cur===RUIN?(G.rng()<.35?1:0):99; }
-function endTurn(G){ G.cur=(G.cur+1)%5; if(G.cur===0){ G.round++; if(G.round>G.maxRound) G.over=true; } if(!G.over) startTurn(G); }
+function endTurn(G){ G.cur=(G.cur+1)%5; if(G.ruinEnd&&!G.hex.some(h=>h.o===4)){ G.over=true; G.ruinFell='cleared'; return; } if(G.cur===0){ G.round++; if(G.ruinEnd&&G.round%(G.ruinDecay||1)===0) G.hex.forEach(h=>{ if(h.o===4&&h.a>1) h.a--; }); if(G.round>G.maxRound){ if(G.ruinEnd){ let n=0; for(let k=0;k<6;k++) G.hex.forEach((h,i)=>{ if(h.o!==4) return; const c=[0,0,0,0]; nb(i).forEach(j=>{ const o=G.hex[j].o; if(o<4) c[o]++; }); const b=c.indexOf(Math.max(...c)); if(c[b]>0){ h.o=b; h.a=1; n++; } }); G.hex.forEach(h=>{ if(h.o===4){ h.o=0; h.a=1; } }); G.ruinFell='collapsed'; } G.over=true; } } if(!G.over) startTurn(G); }
 function aiStep(G){ // one AI action; returns result or null when done
   const p=G.cur; if(p!==RUIN&&!G.mob[p]&&count(G,p)<=6&&G.round>=3){ return {msg:mobilize(G,p)}; }
   const m=G.attacksLeft>0&&aiMoves(G,p); if(!m){ if(p!==RUIN&&!G.moved){ G.moved=1; const n=aiMove(G,p); if(n) return {msg:NAMES[p]+' moved '+n+' troops to the front.'}; } return null; } G.attacksLeft--; return attack(G,m.f,m.t); }
@@ -85,7 +85,7 @@ if(typeof document!=='undefined'){
   if(h.o===G.human){ sel=sel===i?null:i; msg=h.a<2?'Need 2+ armies to attack.':''; return draw(); }
   if(sel!=null&&ADJ[sel].includes(i)){ const r=attack(G,sel,i); show(r); if(r&&r.cap) sel=G.hex[i].a>=2?i:null; else if(G.hex[sel].a<2) sel=null; hooks.save(G); return draw(); } }
  function runAI(){ clearTimeout(tm); if(G.over||G.cur===G.human) return draw(); const r=aiStep(G); if(!r){ endTurn(G); hooks.save(G); msg=''; draw(); tm=setTimeout(runAI,ff?20:350); return; } show(r); draw(); tm=setTimeout(runAI,ff?30:420); }
- api.open=function(container,saved,h){ hooks=h; NAMES=h.names||['You','Green','Blue','Gold','Ruin']; el=container; G=saved?Object.assign(newGame(),saved,{rng:Math.random}):(()=>{ const g=newGame({path:h.path,maxRound:h.maxRound}); if(h.bonus) g.hex.forEach(x=>{ if(x.o===0) x.a+=h.bonus; }); startTurn(g); return g; })(); sel=gsel=null; msg=''; banner=''; draw(); runAI(); };
+ api.open=function(container,saved,h){ hooks=h; NAMES=h.names||['You','Green','Blue','Gold','Ruin']; el=container; G=saved?Object.assign(newGame(),saved,{rng:Math.random}):(()=>{ const g=newGame({path:h.path,maxRound:h.maxRound}); g.ruinEnd=!!h.ruinEnd; if(h.bonus) g.hex.forEach(x=>{ if(x.o===0) x.a+=h.bonus; }); startTurn(g); return g; })(); sel=gsel=null; msg=''; banner=''; draw(); runAI(); };
  api.autoTurn=function(){ if(!G||G.over||G.cur!==G.human) return false; const h=G.human; G.human=-1; let n=0; while(n++<500&&aiStep(G)); G.human=h; sel=gsel=null; mv=null; endTurn(G); hooks.save(G); runAI(); return true; }; api.isMine=()=>G&&!G.over&&G.cur===G.human;
  api.save=g=>{ const {rng,...r}=g; return JSON.parse(JSON.stringify(r)); };
 }
