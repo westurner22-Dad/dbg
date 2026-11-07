@@ -39,12 +39,12 @@ function unit(name,path,L,side,o={}){ const p=PATHS[path], GO=o.gear&&typeof o.g
   return {id:++uid,name,path,side,L,em:o.em||p.em,leader:!!o.boss,hp,mx:hp,mp,mmp:mp,atk:Math.round(80*p.atk*sc(L)*(1+ga)*(L>=5&&path==='Body'?1.06:1)),mat:Math.round(80*p.mat*sc(L)*(1+gm)),
    spd:p.spd+(side==='E'?0:1)+(GO?GO.spd||0:0),techs:side==='P'?KIT[path].filter(t=>TECH[t].lv<=L):[],cd:{},shield:0,dr:0,regen:0,dodge:0,dodge25:0,crit:0,slow:0}; }
 const cost=(u,t)=>Math.round(TECH[t].tier*.1*u.mmp);
-function squad(role,L,gear,slots,allyG){ const me=ROLE2PATH[role]||'Body', rest=['Body','Force','Light','Mass'].filter(x=>x!==me);
-  const nm={Body:'Tiezhu',Force:'Shanmei',Light:'Lumen',Mass:'Zhong'}; return [Object.assign(unit('You',me,L,'P',{gear}),slots?{techs:slots.concat('Focus Breathing')}:{})].concat(rest.map(p=>unit(nm[p],p,L,'P',{gear:allyG&&allyG[p]}))); }
+function squad(role,L,gear,slots,allyG,ranks){ const me=ROLE2PATH[role]||'Body', rest=['Body','Force','Light','Mass'].filter(x=>x!==me);
+  const nm={Body:'Tiezhu',Force:'Shanmei',Light:'Lumen',Mass:'Zhong'}; const G0=gear&&typeof gear==='object'?gear:{}, art=G0.role==='healer'?'Mending Rite':G0.role==='ctrl'?'Binding Seal':null; return [Object.assign(unit('You',me,L,'P',{gear}),slots?{techs:slots.concat(art&&TECH[art]?[art]:[]).concat('Focus Breathing')}:{},{rk:ranks||{},gk:G0.guard||0,hk:G0.heal||0})].concat(rest.map(p=>unit(nm[p],p,L,'P',{gear:allyG&&allyG[p]}))); }
 function enemies(t,b,rng){ const T=TERR[t], L=T.lv+Math.floor(b/2), n=3+Math.min(2,Math.floor((t+b)/2)), out=[];
   out.push(unit('Commissar '+['Wu','Lei','Kang','Mao','Zhen'][t],'Force',L+1,'E',{boss:1,em:'🎖️',t}));
   for(let i=1;i<n;i++){ const [nm,p,em]=ENEMY[Math.floor(rng()*ENEMY.length)]; out.push(unit(nm,p,L,'E',{em,t})); } return out; }
-function newBattle(o,allyG){ const rng=o.rng||Math.random, E=enemies(o.terr,o.battle,rng), K=(globalThis.DEMO_K||1); if(K!==1) E.forEach(u=>['hp','mx','atk','mat'].forEach(k=>{ if(u[k]) u[k]=Math.round(u[k]*K); })); return {t:o.terr,bi:o.battle,L:o.L,P:squad(o.role,o.L,o.gear,o.slots,allyG||o.allyG),E,rng,round:0,phase:'cmd',q:[],over:false,result:null,used:[],items:Object.assign({},o.items||{}),last:null}; }
+function newBattle(o,allyG){ const rng=o.rng||Math.random, E=enemies(o.terr,o.battle,rng), K=(globalThis.DEMO_K||1); if(K!==1) E.forEach(u=>['hp','mx','atk','mat'].forEach(k=>{ if(u[k]) u[k]=Math.round(u[k]*K); })); return {t:o.terr,bi:o.battle,L:o.L,P:squad(o.role,o.L,o.gear,o.slots,allyG||o.allyG,o.ranks),E,rng,round:0,phase:'cmd',q:[],over:false,result:null,used:[],items:Object.assign({},o.items||{}),last:null}; }
 const alive=a=>a.filter(u=>u.hp>0);
 function all(b){ return b.P.concat(b.E); }
 const byId=(b,id)=>all(b).find(u=>u.id===id);
@@ -61,7 +61,7 @@ function startRound(b,cmds){ b.round++; b.phase='act'; b.last=cmds; const q=[];
   q.forEach(x=>x.p=pri(x)); q.sort((a,b2)=>b2.p-a.p); all(b).forEach(u=>u.slow=0); b.q=q; b.log=[]; }
 function hit(b,src,t,mult,phys,ev){ if(t.hp<=0) return; if(t.dodge){ t.dodge=0; ev.push({id:t.id,txt:'Miss'}); return 'dodged'; }
   if(t.dodge25>0&&b.rng()<.25){ ev.push({id:t.id,txt:'Miss'}); return 'dodged'; }
-  let d=(phys?src.atk:src.mat)*mult*(0.9+b.rng()*.2); if(src.crit&&phys){ d*=2; src.crit=0; } if(t.dr>0) d*=.8; if(t.guard) d*=.5; d=Math.round(d);
+  let d=(phys?src.atk:src.mat)*mult*(0.9+b.rng()*.2); if(src.crit&&phys){ d*=2; src.crit=0; } if(t.dr>0) d*=.8; if(t.guard) d*=.5; if(t.gk) d*=1-Math.min(.5,t.gk*.5); d=Math.round(d);
   if(t.shield){ const s=Math.min(t.shield,d); t.shield-=s; d-=s; } t.hp=Math.max(0,t.hp-d); ev.push({id:t.id,txt:String(d),c:'#fff'}); return d; }
 function retarget(b,src,id,foe){ let t=byId(b,id); const pool=alive(foe?(src.side==='P'?b.E:b.P):(src.side==='P'?b.P:b.E)); if(!t||t.hp<=0) t=pool[0]; return t; }
 function act(b){ // executes next queued action; returns {actor, line, ev:[{id,txt,c}]}
@@ -75,8 +75,8 @@ function act(b){ // executes next queued action; returns {actor, line, ev:[{id,t
         if(c.t==='Healing Potion'){ const h=Math.round(.5*t.mx); t.hp=Math.min(t.mx,t.hp+h); ev.push({id:t.id,txt:'+'+h,c:'#6f6'}); } else { const m=Math.round(.3*t.mmp); t.mp=Math.min(t.mmp,t.mp+m); ev.push({id:t.id,txt:'+'+m+' MP',c:'#6cf'}); }
         line=`${u.name} uses ${c.t} on ${t.name}`; } }
     else if(c.k==='run'){ const ch=Math.max(.2,Math.min(.9,.5+.08*(avgSpd(b.P)-avgSpd(b.E)))); if(b.rng()<ch){ b.over=true; b.result='retreat'; return {actor:u,line:'The squad escaped!',ev}; } line='Could not escape!'; }
-    else if(c.k==='tech'){ const T=TECH[c.t], m=cost(u,c.t); if(u.mp<m||(u.cd[c.t]||0)>=b.round){ const t=retarget(b,u,c.tgt,1); const d=hit(b,u,t,1,1,ev); line=`${u.name} lacks mana — attacks: ${d} DMG`; }
-      else { u.mp-=m; b.used.push(c.t); if(T.cd) u.cd[c.t]=b.round+T.cd-1; line=`${u.name}: ${c.t}`;
+    else if(c.k==='tech'){ let T=TECH[c.t]; const m=cost(u,c.t); if(u.mp<m||(u.cd[c.t]||0)>=b.round){ const t=retarget(b,u,c.tgt,1); const d=hit(b,u,t,1,1,ev); line=`${u.name} lacks mana — attacks: ${d} DMG`; }
+      else { u.mp-=m; b.used.push(c.t); const RK=1+.15*(((u.rk||{})[c.t]||1)-1), HK=1+.6*(u.hk||0); T=Object.assign({},T,{pw:(T.pw||0)*RK*(T.tg==='ally'?HK:1)}); if(T.cd) u.cd[c.t]=b.round+T.cd-1; line=`${u.name}: ${c.t}`;
         if(T.fx==='mana'){ const g=Math.round(.15*u.mmp); u.mp=Math.min(u.mmp,u.mp+g); ev.push({id:u.id,txt:'+'+g+' MP',c:'#6cf'}); }
         else if(T.fx==='crit'){ u.crit=1; line+=' (next Fight crits)'; } else if(T.fx==='dodge'){ u.dodge=1; } else if(T.fx==='dodge25'){ u.dodge25=2; }
         else if(T.tg==='ally'){ const t=retarget(b,u,c.tgt,0);
