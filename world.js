@@ -1,6 +1,6 @@
 // Explore (Overworld) demo — Pokémon Red-style grid walking. Hooks: talk(npc) for future BoG cameos / side stories.
 (function(root){
-const MAP=[ // 24x24. T tree, g grass, G tall grass, p path, w water, H building, D door, R rest shrine, L ledge (hop down only), f flowers
+const TOWN=[ // 24x24. T tree, g grass, G tall grass, p path, w water, H building, D door, R rest shrine, L ledge (hop down only), f flowers
 'TTTTTTTTTTTTTTTTTTTTTTTT',
 'TggggggggggpgggggggggggT',
 'TgHHHHHggggpggggHHHHHggT',
@@ -25,20 +25,40 @@ const MAP=[ // 24x24. T tree, g grass, G tall grass, p path, w water, H building
 'TTGGGGGgggggpgggGGGGGTTT',
 'TTTTTTTTTTTTpTTTTTTTTTTT',
 'TTTTTTTTTTTTTTTTTTTTTTTT'];
-const W=24,H=24, COL={T:'#1f5a2a',g:'#8bd06a',G:'#3f9a3a',p:'#d9c48a',w:'#3a7ad9',H:'#b55',D:'#5a3320',R:'#e8d070',L:'#7a6a3a',f:'#8bd06a'};
-const NPCS=[ // hook: id lets polish add BoG cameos / side-story dialogue via World.talk
+const W=24,H=24, TCOL={T:'#1f5a2a',g:'#8bd06a',G:'#3f9a3a',p:'#d9c48a',w:'#3a7ad9',H:'#b55',D:'#5a3320',R:'#e8d070',L:'#7a6a3a',f:'#8bd06a'};
+const TOWN_NPCS=[ // hook: id lets polish add BoG cameos / side-story dialogue via World.talk
  {id:'elder',x:6,y:6,em:'👴',dir:'down',line:'Elder Fang: The Collective sends scouts through the tall grass south of town. Train there.'},
  {id:'merchant',x:16,y:6,em:'👩‍🌾',dir:'down',line:'Auntie Mei: Rest at the golden shrine by the path and your squad is good as new.'},
  {id:'kid',x:9,y:9,em:'🧒',dir:'left',line:'Little Bo: Hop down the ledge, but you can\'t climb back up it!'},
  {id:'trainer',x:15,y:14,em:'🎖️',dir:'left',range:5,trainer:1,line:'Commissar Scout Ren: A sect cultivator! Your territory belongs to the Collective now!',after:'Ren: Hmph. Next time, cultivator.'}];
+// p21: each realm breakthrough opens another explore map (generated, themed); Sect Town stays the hub with Master Yun and the shrine.
+function gen(seed,o){ let r=seed; const rnd=()=>{ r=(r*16807)%2147483647; return r/2147483647; }; const g=[...Array(H)].map((_,y)=>[...Array(W)].map((_,x)=>x===0||y===0||x===W-1||y===H-1?'T':'g'));
+ const box=(x0,y0,w,h,t)=>{ for(let y=y0;y<y0+h;y++) for(let x=x0;x<x0+w;x++) if(x>0&&y>0&&x<W-1&&y<H-1) g[y][x]=t; };
+ for(let i=0;i<o.grass;i++) box(2+Math.floor(rnd()*17),9+Math.floor(rnd()*11),3+Math.floor(rnd()*4),2+Math.floor(rnd()*3),'G');
+ for(let i=0;i<o.trees;i++) box(1+Math.floor(rnd()*21),1+Math.floor(rnd()*21),1+Math.floor(rnd()*2),1,'T');
+ box(3+Math.floor(rnd()*4),2,3,2,'w'); box(16,3,2,2,'w'); for(let i=0;i<6;i++) g[2+Math.floor(rnd()*20)][2+Math.floor(rnd()*20)]='f';
+ for(let y=1;y<H-1;y++) g[y][12]='p'; for(let x=2;x<W-2;x++) g[7][x]='p'; g[6][11]='R'; g[6][12]='p'; g[8][11]='g'; g[7][11]='p';
+ (o.extra||[]).forEach(([x,y,t])=>g[y][x]=t); return g.map(row=>row.join('')); }
+const MAPS={town:{name:'Sect Town',g:TOWN,col:TCOL,npcs:TOWN_NPCS,beasts:null,lvB:0},
+ bamboo:{name:'Whispering Bamboo Pass',g:gen(7,{grass:7,trees:14}),col:{T:'#1d4a2a',g:'#9cc56a',G:'#4a8a2a',p:'#cdb98a',w:'#3a8ab9',H:'#b55',D:'#5a3320',R:'#e8d070',L:'#7a6a3a',f:'#9cc56a'},lvB:0,
+  beasts:[{n:'Bamboo Panda',em:'🐼',ty:'Body',hp:1.25,atk:.95,spd:7,mv:'Bamboo Smash'},{n:'Mist Crane',em:'🦢',ty:'Light',hp:.85,atk:1.05,spd:13,mv:'Mist Wing'},{n:'Collective Mule',em:'🫏',ty:'Mass',hp:1.2,atk:.9,spd:8,mv:'Quota Kick'},{n:'Gale Hawk',em:'🦅',ty:'Force',hp:.85,atk:1.1,spd:14,mv:'Gale Dive'}],
+  npcs:[{id:'refugee',x:14,y:7,em:'🧕',dir:'left',line:'Refugee Lin: They took our village’s rice and gave us a pamphlet about rice. Hold the pass, cultivator.'}]},
+ ash:{name:'Ash Archive Road',g:gen(31,{grass:8,trees:10}),col:{T:'#3a3530',g:'#9a948a',G:'#6a6458',p:'#c9b79a',w:'#4a6a8a',H:'#b55',D:'#5a3320',R:'#e8d070',L:'#7a6a3a',f:'#9a948a'},lvB:1,
+  beasts:[{n:'Cinder Wolf',em:'🐺',ty:'Force',hp:1.05,atk:1.1,spd:12,mv:'Ember Fang'},{n:'Archive Moth',em:'🦋',ty:'Light',hp:.8,atk:1.1,spd:14,mv:'Page Dust'},{n:'Ash Golem',em:'🗿',ty:'Mass',hp:1.5,atk:.85,spd:5,mv:'Ash Fall'},{n:'Iron Ape',em:'🦍',ty:'Body',hp:1.15,atk:1.0,spd:9,mv:'Iron Fist'}],
+  npcs:[{id:'archivist',x:14,y:7,em:'📜',dir:'left',line:'Archivist Pell: Every sect kept records of the old war between the Maker and the Breaker. The Collective burns what it cannot rewrite.'}]},
+ province:{name:'Gray Province Marches',g:gen(53,{grass:9,trees:8}),col:{T:'#2a2438',g:'#8a86a0',G:'#5a5478',p:'#bfb2c9',w:'#4a4a8a',H:'#b55',D:'#5a3320',R:'#e8d070',L:'#7a6a3a',f:'#8a86a0'},lvB:2,
+  beasts:[{n:'Gray Banner Wraith',em:'👻',ty:'Light',hp:.95,atk:1.15,spd:12,mv:'Slogan Wail'},{n:'Ruin Hound',em:'🐕‍🦺',ty:'Body',hp:1.15,atk:1.1,spd:11,mv:'Requisition Bite'},{n:'Tractor Spirit',em:'🚜',ty:'Mass',hp:1.6,atk:.9,spd:5,mv:'Five-Year Plow'},{n:'Storm Roc',em:'🦤',ty:'Force',hp:1.0,atk:1.15,spd:13,mv:'Thunder Talon'}],
+  npcs:[{id:'scout',x:14,y:7,em:'🏹',dir:'left',line:'Scout Oyelaran: The provinces remember who they were. Take back the gray hexes and they will remember louder.'}]}};
+let MAPID='town', MAP=TOWN, COL=TCOL, NPCS=TOWN_NPCS;
+function setMap(id){ const m=MAPS[id]||MAPS.town; MAPID=MAPS[id]?id:'town'; MAP=m.g; COL=m.col; NPCS=m.npcs; }
 const DIRS={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
 const tile=(x,y)=>(x<0||y<0||x>=W||y>=H)?'T':MAP[y][x];
 function npcAt(w,x,y){ return NPCS.find(n=>{ const p=w.npc[n.id]; return p.x===x&&p.y===y; }); }
 function passable(w,x,y,dy){ const t=tile(x,y); if('THDw'.includes(t)) return false; if(t==='L'&&dy!==1) return false; if(npcAt(w,x,y)) return false; if(w.x===x&&w.y===y) return false; return true; }
-function newState(s){ s=s||{}; const w={x:s.x??11,y:s.y??7,dir:s.dir||'down',beaten:s.beaten||{},hp:s.hp||null,pk:s.pk||null,steps:s.steps||0,npc:{}};
+function newState(s){ s=s||{}; if((s.map||'town')!==MAPID){ s={map:MAPID,beaten:s.beaten}; } const w={map:MAPID,x:s.x??11,y:s.y??7,dir:s.dir||'down',beaten:s.beaten||{},hp:s.hp||null,pk:s.pk||null,steps:s.steps||0,npc:{}};
   NPCS.forEach(n=>w.npc[n.id]={x:n.x,y:n.y,dir:n.dir}); return w; }
 let w=null, cv, cx, hooks, held=null, mv=null, txt=null, busy=false, raf=0, rng=Math.random, el;
-function save(){ hooks.save({x:w.x,y:w.y,dir:w.dir,beaten:w.beaten,hp:w.hp,pk:w.pk,steps:w.steps}); }
+function save(){ hooks.save({map:w.map,x:w.x,y:w.y,dir:w.dir,beaten:w.beaten,hp:w.hp,pk:w.pk,steps:w.steps}); }
 function say(t,then){ txt={t,then}; el.querySelector('#wtx').style.display='block'; el.querySelector('#wtx').textContent=t+'  ▼'; }
 function closeTxt(){ const th=txt&&txt.then; txt=null; el.querySelector('#wtx').style.display='none'; if(th) th(); }
 function face(){ const [dx,dy]=DIRS[w.dir]; return [w.x+dx,w.y+dy]; }
@@ -82,7 +102,7 @@ function stop(){ cancelAnimationFrame(raf); held=null; }
 function keyd(e){ if(!el||!document.body.contains(el)) return; const k={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key]; if(k){ held=k; e.preventDefault(); } if(e.key==='z'||e.key==='Z') A(); if(e.key==='x'||e.key==='X') B(); }
 function keyu(e){ const k={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key]; if(k&&held===k) held=null; }
 if(typeof document!=='undefined'){ document.addEventListener('keydown',keyd); document.addEventListener('keyup',keyu); }
-function open(container,s,h){ hooks=h; el=container; w=newState(s); busy=false; mv=null; txt=null;
+function open(container,s,h){ hooks=h; el=container; setMap((s&&s.map)||'town'); w=newState(s); busy=false; mv=null; txt=null;
   el.innerHTML=`<div style="position:relative"><canvas id=wcv width=320 height=288 style="width:100%;image-rendering:pixelated;border-radius:6px;background:#000;touch-action:none"></canvas>
   <div id=wfl style="position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .08s"></div>
   <div id=wtx style="display:none;position:absolute;left:4px;right:4px;bottom:4px;background:#fff;color:#000;border:3px double #333;border-radius:6px;padding:8px;font:16px monospace"></div></div>
@@ -93,5 +113,5 @@ function open(container,s,h){ hooks=h; el=container; w=newState(s); busy=false; 
     ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,e=>{ e.preventDefault(); if(held===d) held=null; })); });
   el.querySelector('#wA').addEventListener('pointerdown',e=>{ e.preventDefault(); A(); }); el.querySelector('#wB').addEventListener('pointerdown',e=>{ e.preventDefault(); B(); });
   last=performance.now(); cancelAnimationFrame(raf); raf=requestAnimationFrame(loop); if(h.msg) say(h.msg); }
-root.World={open,stop,MAP,NPCS,tile,get state(){return w;},press:d=>{held=d;},release:()=>{held=null;},A,B,setRng:r=>rng=r,tick:frame};
+root.World={open,stop,MAPS,NPCS:TOWN_NPCS,setMap,get mapId(){return MAPID;},get map(){return MAPS[MAPID];},tile,get state(){return w;},press:d=>{held=d;},release:()=>{held=null;},A,B,setRng:r=>rng=r,tick:frame};
 })(window);

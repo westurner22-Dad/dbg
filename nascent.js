@@ -44,11 +44,16 @@ function aiMoves(G,p){ // greedy: best odds adjacent attack; Ruin mostly defends
 function aiTurn(G,p){ const out=[]; if(!G.mob[p]&&p!==RUIN&&count(G,p)<=6&&G.round>=3) out.push({mob:1});
   const lim=p===RUIN?(G.rng()<.35?1:0):6; return {lim,out}; }
 function startTurn(G){ G.phase='attack'; G.moved=0; regen(G,G.cur); G.attacksLeft=G.cur===RUIN?(G.rng()<.35?1:0):99; }
-function endTurn(G){ G.cur=(G.cur+1)%5; if(G.ruinEnd&&!G.hex.some(h=>h.o===4)){ G.over=true; G.ruinFell='cleared'; return; } if(G.cur===0){ G.round++; if(G.ruinEnd&&G.round%(G.ruinDecay||1)===0) G.hex.forEach(h=>{ if(h.o===4&&h.a>1) h.a--; }); if(G.round>G.maxRound){ if(G.ruinEnd){ let n=0; for(let k=0;k<6;k++) G.hex.forEach((h,i)=>{ if(h.o!==4) return; const c=[0,0,0,0]; nb(i).forEach(j=>{ const o=G.hex[j].o; if(o<4) c[o]++; }); const b=c.indexOf(Math.max(...c)); if(c[b]>0){ h.o=b; h.a=1; n++; } }); G.hex.forEach(h=>{ if(h.o===4){ h.o=0; h.a=1; } }); G.ruinFell='collapsed'; } G.over=true; } } if(!G.over) startTurn(G); }
+function endTurn(G){ G.cur=(G.cur+1)%5; if(G.ruinEnd&&!G.ruinFell&&!G.hex.some(h=>h.o===4)){ G.ruinFell='cleared'; G.clearRound=G.round; if(!G.pvp){ G.over=true; return; } G.log.push('The last gray hex falls! Rivals may keep fighting until the weekend.'); }
+ if(G.cur===4&&G.ruinFell) G.cur=0; if(G.cur===0){ G.round++; if(G.ruinEnd&&G.round%(G.ruinDecay||1)===0) G.hex.forEach(h=>{ if(h.o===4&&h.a>1) h.a--; }); if(G.round>G.maxRound&&!G.ruinFell){ if(G.ruinEnd){ let n=0; for(let k=0;k<6;k++) G.hex.forEach((h,i)=>{ if(h.o!==4) return; const c=[0,0,0,0]; nb(i).forEach(j=>{ const o=G.hex[j].o; if(o<4) c[o]++; }); const b=c.indexOf(Math.max(...c)); if(c[b]>0){ h.o=b; h.a=1; n++; } }); G.hex.forEach(h=>{ if(h.o===4){ h.o=0; h.a=1; } }); G.ruinFell='collapsed'; G.clearRound=G.round; } if(!G.pvp) G.over=true; } } if(!G.over) startTurn(G); }
 function aiStep(G){ // one AI action; returns result or null when done
   const p=G.cur; if(p!==RUIN&&!G.mob[p]&&count(G,p)<=6&&G.round>=3){ return {msg:mobilize(G,p)}; }
   const m=G.attacksLeft>0&&aiMoves(G,p); if(!m){ if(p!==RUIN&&!G.moved){ G.moved=1; const n=aiMove(G,p); if(n) return {msg:NAMES[p]+' moved '+n+' troops to the front.'}; } return null; } G.attacksLeft--; return attack(G,m.f,m.t); }
-const api={reach,moveTroops,aiMove,W,H,N,ADJ,HOMES,NAMES,COLS,GT,RUIN,newGame,attack,moveGen,mobilize,regen,count,armies,startTurn,endTurn,aiStep,capOf};
+function shrinkRuin(G,n){ const grayN=()=>G.hex.filter(h=>h.o===RUIN).length; let p=0, guard=0;
+  while(grayN()>n&&guard++<200){ const own=G.hex.map((h,i)=>i).filter(i=>G.hex[i].o===p), home=HOMES[p][0], [hx,hy]=xy(home);
+   const c=G.hex.map((h,i)=>i).filter(i=>G.hex[i].o===RUIN&&ADJ[i].some(j=>own.includes(j))).sort((a,b)=>{ const [ax,ay]=xy(a),[bx,by]=xy(b); return (Math.abs(ax-hx)+Math.abs(ay-hy))-(Math.abs(bx-hx)+Math.abs(by-hy)); })[0];
+   if(c!=null){ G.hex[c].o=p; G.hex[c].a=3; } p=(p+1)%4; } }
+const api={shrinkRuin,reach,moveTroops,aiMove,W,H,N,ADJ,HOMES,NAMES,COLS,GT,RUIN,newGame,attack,moveGen,mobilize,regen,count,armies,startTurn,endTurn,aiStep,capOf};
 // ---------------- UI ----------------
 if(typeof document!=='undefined'){
  let G,el,mv=null,sel=null,gsel=null,ff=false,tm=0,msg='',banner='',hooks;
@@ -65,8 +70,8 @@ if(typeof document!=='undefined'){
   return s+'</svg>'; }
  function draw(){ const hum=G.cur===G.human&&!G.over;
   const hud=[0,1,2,3,4].map(p=>`<span style="display:inline-flex;align-items:center;gap:3px;margin-right:8px"><svg width=16 height=16 viewBox="0 0 16 16"><polygon points="8,1 15,4.5 15,11.5 8,15 1,11.5 1,4.5" fill="${COLS[p]}" stroke="${G.cur===p?'#fff':'#000'}" stroke-width=2/></svg><b>${armies(G,p)}</b></span>`).join('');
-  const prompt=G.over?final():hum&&mv?`Move <b>${mv.n}</b> troops`:hum&&G.phase==='move'?(msg||(sel!=null?'Tap a connected hex you own':'Move troops: tap your hex, then a connected hex you own')):hum?(msg||(gsel!=null?'Tap an owned hex to move the General':sel!=null?'Tap an adjacent enemy':'Your turn! Tap your territory, then an adjacent enemy')):(msg||NAMES[G.cur]+"'s turn");
-  el.innerHTML=`<div class=nsb><div class=nhud>${hud}<span style="float:right">R${Math.min(G.round,G.maxRound)}/${G.maxRound}</span></div>
+  const prompt=G.over?final():hum&&mv?`Move <b>${mv.n}</b> troops`:hum&&G.phase==='move'?(msg||(sel!=null?'Tap a connected hex you own':'Move troops: tap your hex, then a connected hex you own')):hum?(msg||(gsel!=null?'Tap an owned hex to move the General':sel!=null?'Tap an adjacent enemy':G.ruinFell?'Ruin’s gray is gone — take territory from your rivals until the weekend!':'Your turn! Tap your territory, then an adjacent gray or rival hex')):(msg||NAMES[G.cur]+"'s turn");
+  el.innerHTML=`<div class=nsb><div class=nhud>${hud}<span style="float:right">${G.ruinEnd?(G.ruinFell?'⚔️ Rivals’ war':'Gray hexes: '+count(G,4))+' · R'+G.round:'R'+Math.min(G.round,G.maxRound)+'/'+G.maxRound}</span></div>
    <div class=nmap>${svg()}${banner?`<div class=nban>${banner}</div>`:''}</div>
    <div class=nbar><div class=nmsg>${prompt}</div>${G.over?`<button class=npill id=nnew>New</button>`:hum&&mv?`<button class=npill id=nmin>−</button><button class=npill id=npl>+</button><button class=npill id=nok>Move</button><button class=npill id=nx>✕</button>`:hum&&G.phase==='move'?`<button class=npill id=nend>End Turn</button>`:hum?`${G.mob[0]?'':`<button class="npill nmob" id=nmob>Mobilize</button>`}<button class=npill id=nea>End Attacks</button>`:`<button class=npill id=nff>${ff?'▶▶ on':'▶▶'}</button>`}</div>
    <div class=nsum>${[0,1,2,3,4].map(p=>`<span style="color:${COLS[p]}">${NAMES[p]} ${count(G,p)}</span>`).join(' · ')} territories <button class=s id=nback style="float:right">Back</button></div></div>`;
@@ -85,7 +90,7 @@ if(typeof document!=='undefined'){
   if(h.o===G.human){ sel=sel===i?null:i; msg=h.a<2?'Need 2+ armies to attack.':''; return draw(); }
   if(sel!=null&&ADJ[sel].includes(i)){ const r=attack(G,sel,i); show(r); if(r&&r.cap) sel=G.hex[i].a>=2?i:null; else if(G.hex[sel].a<2) sel=null; hooks.save(G); return draw(); } }
  function runAI(){ clearTimeout(tm); if(G.over||G.cur===G.human) return draw(); const r=aiStep(G); if(!r){ endTurn(G); hooks.save(G); msg=''; draw(); tm=setTimeout(runAI,ff?20:350); return; } show(r); draw(); tm=setTimeout(runAI,ff?30:420); }
- api.open=function(container,saved,h){ hooks=h; NAMES=h.names||['You','Green','Blue','Gold','Ruin']; el=container; G=saved?Object.assign(newGame(),saved,{rng:Math.random}):(()=>{ const g=newGame({path:h.path,maxRound:h.maxRound}); g.ruinEnd=!!h.ruinEnd; if(h.bonus) g.hex.forEach(x=>{ if(x.o===0) x.a+=h.bonus; }); startTurn(g); return g; })(); sel=gsel=null; msg=''; banner=''; draw(); runAI(); };
+ api.open=function(container,saved,h){ hooks=h; if(saved&&h.pvp!=null) saved.pvp=h.pvp; NAMES=h.names||['You','Green','Blue','Gold','Ruin']; el=container; G=saved?Object.assign(newGame(),saved,{rng:Math.random}):(()=>{ const g=newGame({path:h.path,maxRound:h.maxRound}); g.ruinEnd=!!h.ruinEnd; g.pvp=!!h.pvp; if(h.ruinHexes!=null) shrinkRuin(g,h.ruinHexes); if(h.bonus) g.hex.forEach(x=>{ if(x.o===0) x.a+=h.bonus; }); startTurn(g); return g; })(); sel=gsel=null; msg=''; banner=''; if(!saved&&h.save) h.save(G); draw(); runAI(); };
  api.autoTurn=function(){ if(!G||G.over||G.cur!==G.human) return false; const h=G.human; G.human=-1; let n=0; while(n++<500&&aiStep(G)); G.human=h; sel=gsel=null; mv=null; endTurn(G); hooks.save(G); runAI(); return true; }; api.isMine=()=>G&&!G.over&&G.cur===G.human;
  api.save=g=>{ const {rng,...r}=g; return JSON.parse(JSON.stringify(r)); };
 }

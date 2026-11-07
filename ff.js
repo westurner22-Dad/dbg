@@ -85,7 +85,7 @@ function act(b){ // executes next queued action; returns {actor, line, ev:[{id,t
           if(T.fx==='dr'){ t.dr=3; ev.push({id:t.id,txt:'Stone Skin',c:'#ccc'}); } if(T.fx==='regen'){ t.regen=3; t.regenAmt=Math.round(u.mat*T.pw); ev.push({id:t.id,txt:'Regen',c:'#6f6'}); } line+=' → '+t.name; }
         else if(T.tg==='all'){ alive(foes).forEach(t=>{ const d=hit(b,u,t,T.pw,T.phys,ev); if(T.slow&&d!=='dodged') t.slow=1; }); }
         else { const t=retarget(b,u,c.tgt,1); const d=hit(b,u,t,T.pw,T.phys,ev); if((T.slow||c.t==='Kick')&&d!=='dodged') t.slow=1; line+=` → ${t.name}: ${d==='dodged'?'miss':d+' DMG'}`; } } }
-    check(b); return {actor:u,line,ev}; }
+    check(b); return {actor:u,line,ev,c}; }
   endRound(b); return null; }
 function endRound(b){ if(b.over) return; all(b).forEach(u=>{ if(u.hp<=0) return; if(u.regen>0){ u.regen--; u.hp=Math.min(u.mx,u.hp+u.regenAmt); } if(u.dr>0) u.dr--; if(u.dodge25>0) u.dodge25--; u.guard=0; });
   check(b); if(!b.over) b.phase='cmd'; }

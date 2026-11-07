@@ -18,7 +18,7 @@ function create(o){ o=o||{}; const g={seed:o.seed||((Math.random()*1e9)|0),round
  const starts=[[2,8],[5,8],[1,9],[6,9]];
  g.units=paths.map((p,i)=>{ const d=P[p]; return {id:'u'+i,me:i===0,path:p,role:d.role,name:i===0?(o.name||'You'):d.nm,img:d.img,x:starts[i][0],y:starts[i][1],mx:d.hp,hp:d.hp,mmp:d.mmp,mp:d.mmp,atk:d.atk,mat:d.mat,spd:d.spd,mv:d.mv,rng:d.rng,
   techs:i===0?techsFor(p,o.slots):techsFor(p,o.allies&&o.allies[p]&&o.allies[p].techs),cd:{},buf:{},down:false,potions:1,sc:{dmg:0,pro:0,sus:0,con:0}}; });
- g.units.forEach(u=>{ const al=o.allies&&o.allies[u.path]; if(!u.me&&al&&al.name) u.name=al.name; const gv=(u.me?o.gear:al&&al.gear)||0, GO=typeof gv==='object'?gv:{hp:gv,atk:gv,mat:gv}; [['mx','hp'],['hp','hp'],['atk','atk'],['mat','mat'],['mmp','mp'],['mp','mp']].forEach(([k,s])=>{ if(GO[s]&&u[k]) u[k]=Math.round(u[k]*(1+GO[s])); }); });
+ g.units.forEach(u=>{ const al=o.allies&&o.allies[u.path]; if(!u.me&&al&&al.name) u.name=al.name; const gv=(u.me?o.gear:al&&al.gear)||0, GO=typeof gv==='object'?gv:{hp:gv,atk:gv,mat:gv}; [['mx','hp'],['hp','hp'],['atk','atk'],['mat','mat'],['mmp','mp'],['mp','mp']].forEach(([k,s])=>{ if(GO[s]&&u[k]) u[k]=Math.round(u[k]*(1+GO[s])); }); if(GO.spd) u.spd+=GO.spd; });
  const BH=Math.round(BOSS.hp*(globalThis.DEMO_K||1)*(o.bossMul||1)); g.bdm=o.bossDmg||1; g.boss={id:'boss',x:3,y:1,hp:BH,mx:BH,spd:BOSS.spd,mv:BOSS.mv,hitR:{},taunt:null};
  newRound(g); return g; }
 const alive=g=>g.units.filter(u=>!u.down);
@@ -34,12 +34,16 @@ function reach(g,u){ const mv=u.mv-(u.buf.rooted?1:0); const best={}; best[u.x+'
  while(q.length){ const [x,y,c]=q.shift(); for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx=x+dx,ny=y+dy; if(!inB(nx,ny)) continue; const t=terr(nx,ny); if(t==='p') continue; const o=occ(g,nx,ny,u); if(o==='boss'||(o&&!o.down)) continue;
   const nc=c+(t==='m'?2:1); if(nc>mv) continue; const k=nx+','+ny; if(best[k]===undefined||nc<best[k]){ best[k]=nc; q.push([nx,ny,nc]); } } }
  return Object.keys(best).filter(k=>{ const [x,y]=k.split(',').map(Number); const o=occ(g,x,y,u); return !o; }).map(k=>k.split(',').map(Number)); }
-function newRound(g){ g.round++; const b=g.boss; b.hitR={}; 
- const ini=[...g.units.map(u=>({id:u.id,v:u.spd*2+(u.gear||0)+R(g)})),{id:'boss',v:b.spd*2+R(g)}].sort((a,c)=>c.v-a.v); g.order=ini.map(i=>i.id); g.cur=-1;
+// p21 speed tick (ATB): every actor fills a gauge at 10×Speed per round and acts each time it passes 100.
+// Speed 10 = one turn a round; a modest lead banks extra turns over time; double speed ≈ twice the turns.
+function newRound(g){ g.round++; const b=g.boss; b.hitR={}; g.atb=g.atb||{}; g.acts={}; const q=[];
+ [...g.units,b].forEach(u=>{ if(u!==b&&u.down) return; let a=g.atb[u.id]; if(a==null) a=R(g)*40; const rate=10*Math.max(1,u.spd); let k=1;
+  while(a+rate>=100*k){ q.push({id:u.id,t:(100*k-a)/rate+R(g)*1e-3}); k++; } g.atb[u.id]=a+rate-100*(k-1); });
+ q.sort((x,y)=>x.t-y.t); g.order=q.map(x=>x.id); g.cur=-1;
  g.ev.push({t:'round',r:g.round}); if(g.round===15) g.ev.push({t:'banner',s:'Round 15 — the Monarch’s fury is unbound'}); }
 function cur(g){ const id=g.order[g.cur]; return id==='boss'?g.boss:g.units.find(u=>u.id===id); }
 function advance(g){ // returns current actor; skips downed
- for(;;){ g.cur++; if(g.cur>=g.order.length){ endRound(g); if(g.over) return null; newRound(g); continue; } const a=cur(g); if(a===g.boss||!a.down){ if(a!==g.boss){ a.moved=false; a.acted=false; a.buf.block=0; if(g.boss.taunt===a.id) g.boss.taunt=null; } return a; } } }
+ for(;;){ g.cur++; if(g.cur>=g.order.length){ endRound(g); if(g.over) return null; newRound(g); continue; } const a=cur(g); if(a===g.boss||!a.down){ const n=g.acts[a.id]=(g.acts[a.id]||0)+1; if(n>1&&a!==g.boss) g.ev.push({t:'msg',s:'⚡ '+a.name+' is faster — extra turn!'},{t:'fx',id:a.id,k:'haste'}); if(a!==g.boss){ a.moved=false; a.acted=false; a.buf.block=0; if(g.boss.taunt===a.id) g.boss.taunt=null; } return a; } } }
 function endRound(g){ for(const u of alive(g)){ if(terr(u.x,u.y)==='x'){ hurt(g,u,Math.round(u.mx*.05),'hazard',true); }
   if(u.buf.regen>0&&!u.down){ heal(g,u,u,u.buf.regenV,true); u.buf.regen--; } ['dr','dodge25','rooted'].forEach(k=>{ if(u.buf[k]>0) u.buf[k]--; }); u.mp=Math.min(u.mmp,u.mp+Math.round(u.mmp*.06)); }
  if(g.slow>0) g.slow--; if(g.boss.hp>0&&g.round>=20){ g.over='escape'; g.ev.push({t:'banner',s:'The Monarch escapes into the storm!'}); }

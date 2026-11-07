@@ -1,6 +1,9 @@
 // p17 Weekend boss UI (DOM sprites over a CSS-tiled grid). Opened from day screen or #weekend.
 (function(){
 const $=s=>document.querySelector(s); let g,ui,opt,timerI;
+// p21: Auto is a sticky toggle per player — flip it on once (e.g. a busy Saturday) and it stays on, fight after fight, until you turn it off.
+const AK=()=>'dbg_wkauto_'+((opt&&opt.name)||'me'); function autoGet(){ try{ return localStorage.getItem(AK())==='1'; }catch(e){ return false; } } function autoSet(v){ try{ localStorage.setItem(AK(),v?'1':'0'); }catch(e){} }
+function autoBtn(){ const b=$('#wauto'); if(!b) return; b.textContent=ui.auto?'AUTO ✓':'AUTO'; b.style.background=ui.auto?'#2a6':''; b.title=ui.auto?'Auto is ON — stays on until you tap it off':'Turn Auto on (stays on)'; }
 const ZO=[.8,1,1.3]; const TITLE={dmg:'Worldbreaker',pro:'The Unyielding',sus:'Beacon of Heaven',con:'Master of Fate'};
 const CSS=`#wk{position:fixed;inset:0;background:radial-gradient(ellipse at top,#1b2440,#07090f 70%);color:#eef;font:14px/1.25 system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;user-select:none;-webkit-user-select:none;touch-action:manipulation;overflow:hidden;z-index:50}
 #wk.p2{background:radial-gradient(ellipse at top,#3a1850,#0b0612 70%)} #wk.p2 .bd{box-shadow:0 0 24px #a4f8,inset 0 0 40px #60f4}
@@ -28,6 +31,7 @@ const CSS=`#wk{position:fixed;inset:0;background:radial-gradient(ellipse at top,
 .un.dn img{filter:grayscale(1) brightness(.6);transform:translateX(-50%) rotate(-80deg);transform-origin:50% 85%;animation:none}.un.dn:before{content:'DOWN';position:absolute;top:30%;left:0;right:0;text-align:center;font:bold 9px sans-serif;color:#f88;z-index:7}
 @keyframes bob{50%{transform:translateX(-50%) translateY(-6%)}}.un.lg img{animation:lg .35s}@keyframes lg{40%{transform:translateX(-50%) translate(var(--lx),var(--ly)) scale(1.1)}}
 .un.ht img{animation:ht .4s}@keyframes ht{0%,50%{filter:brightness(3) sepia(1) hue-rotate(-50deg) saturate(5)}25%{transform:translateX(-46%)}75%{transform:translateX(-54%)}}
+.un.hs img{animation:hs .5s}@keyframes hs{50%{filter:brightness(1.8) drop-shadow(0 0 8px #6cf);transform:translateX(-50%) scale(1.12)}}
 .un.tn:after{content:'';position:absolute;inset:-6%;border-radius:50%;box-shadow:0 0 14px 4px #f63;animation:tl .5s infinite alternate;z-index:-1}
 .un.bl .whb{box-shadow:0 0 6px 2px #6cf}.un .ic{position:absolute;right:-4%;top:-4%;font-size:10px;z-index:7}
 .fn{position:absolute;z-index:20;font:900 18px system-ui;color:#fff;-webkit-text-stroke:1px #000;text-shadow:0 2px 0 #000;animation:fn 1s forwards;pointer-events:none;transform:translateX(-50%)}.fn.h{color:#7f7}.fn.c{color:#ffd84a;font-size:23px}
@@ -55,17 +59,17 @@ const CSS=`#wk{position:fixed;inset:0;background:radial-gradient(ellipse at top,
 const sp=u=>u.id==='boss'?'img/ape.png':u.me&&opt&&opt.meImg?opt.meImg:'img/'+u.img+'.png';
 function T(){ const bw=document.querySelector('#bw'); const aw=Math.min(innerWidth,520)-16, ah=bw?bw.clientHeight-6:440; return Math.floor(Math.min(aw/8,ah/10,64)*ZO[ui.z]); }
 function open(o){ opt=o||{}; if(!$('#wkcss')){ const s=document.createElement('style'); s.id='wkcss'; s.textContent=CSS; document.head.appendChild(s); }
- g=WK.create({path:opt.path,slots:opt.slots,name:opt.name,allies:opt.allies,gear:opt.gear}); ui={z:1,mode:'wait',sel:null,auto:false,busy:false}; 
- const el=document.createElement('div'); el.id='wk'; if(opt&&opt.skin) el.className='ruin'; el.innerHTML=SK(`<div class=wtop><div class=wbi></div><div style="flex:1;min-width:0"><div class=wbn><span>Thunder Ape Monarch</span><span id=wbh></span></div><div class=wbar><i id=wbf></i><b></b></div><div class=wsub><span id=wrd></span><span id=wph></span></div></div>
- </div><div style="display:flex;align-items:center;padding:0 8px 4px 0"><div class=word id=word style="flex:1"></div><button class=wx id=zout>－</button><button class=wx id=zin>＋</button><button class=wx id=wauto style="font-size:11px">AUTO</button><button class=wx id=wq>✕</button></div>
+ g=WK.create({path:opt.path,slots:opt.slots,name:opt.name,allies:opt.allies,gear:opt.gear}); ui={z:1,mode:'wait',sel:null,auto:autoGet(),busy:false}; 
+ const el=document.createElement('div'); el.id='wk'; if(opt&&(opt.cls||opt.skin)) el.className=opt.cls||'ruin'; el.innerHTML=SK(`<div class=wtop><div class=wbi></div><div style="flex:1;min-width:0"><div class=wbn><span>Thunder Ape Monarch</span><span id=wbh></span></div><div class=wbar><i id=wbf></i><b></b></div><div class=wsub><span id=wrd></span><span id=wph></span></div></div>
+ </div><div style="display:flex;align-items:center;padding:0 8px 4px 0"><div class=word id=word style="flex:1" title="Turn order this round — faster cultivators can appear twice"></div><button class=wx id=zout>－</button><button class=wx id=zin>＋</button><button class=wx id=wauto style="font-size:11px">AUTO</button><button class=wx id=wq>✕</button></div>
  <div class=bw id=bw><div class=bd id=bd></div></div>
  <div class=wpt id=wpt></div><div class=cmd id=cmd><div class=msg id=wmsg></div><div id=wmn></div></div>`);
  document.body.appendChild(el);
  const tap=(id,f)=>$('#'+id).addEventListener('pointerdown',e=>{e.preventDefault();f();});
  tap('zin',()=>{ ui.z=Math.min(2,ui.z+1); build(); }); tap('zout',()=>{ ui.z=Math.max(0,ui.z-1); build(); });
- tap('wq',()=>{ if(g.over||confirm('Leave the boss fight?')) close(); }); tap('wauto',()=>{ ui.auto=!ui.auto; $('#wauto').style.background=ui.auto?'#2a6':''; if(ui.auto&&ui.mode!=='wait'&&!ui.busy){ const a=WK.cur(g); clearT(); ui.mode='wait'; WK.ai(g,a); play(step); } });
+ tap('wq',()=>{ if(g.over||confirm('Leave the boss fight?')) close(); }); tap('wauto',()=>{ ui.auto=!ui.auto; autoSet(ui.auto); autoBtn(); say(ui.auto?'Auto ON — your cultivator fights on their own until you turn it off.':'Auto OFF — you command your cultivator.'); if(ui.auto&&ui.mode!=='wait'&&!ui.busy){ const a=WK.cur(g); clearT(); ui.mode='wait'; WK.ai(g,a); play(step); } });
  el.addEventListener('gesturestart',e=>e.preventDefault()); el.addEventListener('dblclick',e=>e.preventDefault());
- addEventListener('resize',()=>{ if(g&&$('#bd')) build(); }); build(); banner('Weekend Advancement Boss'); say('The Thunder Ape Monarch descends! Party: '+g.units.map(u=>u.name+' ('+u.role+')').join(', ')+'.'); setTimeout(step,900); }
+ addEventListener('resize',()=>{ if(g&&$('#bd')) build(); }); build(); autoBtn(); banner('Weekend Advancement Boss'); say('The Thunder Ape Monarch descends! Party: '+g.units.map(u=>u.name+' ('+u.role+')').join(', ')+'.'); setTimeout(step,900); }
 function close(){ clearT(); g=null; const e=$('#wk'); if(e) e.remove(); const n=$('.wend'); if(n) n.remove(); opt.back&&opt.back(); }
 function build(){ const t=T(), bd=$('#bd'); bd.style.width=WK.W*t+'px'; bd.style.height=WK.H*t+'px'; let h='';
  for(let y=0;y<WK.H;y++) for(let x=0;x<WK.W;x++){ const c=WK.terr(x,y); h+=`<div class="wt t${c==='.'?'g':c}" data-x=${x} data-y=${y} style="left:${x*t}px;top:${y*t}px;width:${t}px;height:${t}px;z-index:${c==='p'?y+1:0}"></div>`; }
@@ -96,7 +100,7 @@ function play(done){ ui.busy=true; render(); const ev=g.ev.splice(0); let i=0; c
   else if(e.t==='move'){ render(); d=380; } else if(e.t==='aoe'){ e.cells.forEach(([x,y])=>{ const t=T(),b=document.createElement('div'); b.className='bolt'; Object.assign(b.style,{left:(x*t-t/2)+'px',top:(y*t-t/2)+'px',width:2*t+'px',height:2*t+'px'}); $('#bd').appendChild(b); setTimeout(()=>b.remove(),650); });
    const f=document.createElement('div'); f.className='flash'; $('#bd').appendChild(f); setTimeout(()=>f.remove(),500); render(); d=450; }
   else if(e.t==='leap'){ d=150; } else if(e.t==='phase2'){ render(); const f=document.createElement('div'); f.className='flash'; f.style.background='#c6f'; $('#wk').appendChild(f); setTimeout(()=>f.remove(),500); }
-  else if(e.t==='banner'){ banner(e.s); d=900; } else if(e.t==='tele'){ render(); d=300; } else if(e.t==='fx'){ if(e.k==='taunt'||e.k==='roar') cls(e.id,'lg',350); render(); }
+  else if(e.t==='banner'){ banner(e.s); d=900; } else if(e.t==='tele'){ render(); d=300; } else if(e.t==='fx'){ if(e.k==='taunt'||e.k==='roar') cls(e.id,'lg',350); if(e.k==='haste'){ float(e.id,'⚡ extra turn','c'); cls(e.id,'hs',500); } render(); }
   else if(e.t==='down'){ render(); d=300; } else if(e.t==='round'){ render(); }
   setTimeout(nx,ui.fast?d/3:d); }; nx(); }
 function clearT(){ clearInterval(timerI); timerI=null; }
