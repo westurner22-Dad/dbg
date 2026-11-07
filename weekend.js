@@ -78,8 +78,8 @@ function act(g,u,t,tgt){ const i=techInfo(u,t), c=tcost(u,t); u.mp-=c; if(i.cd) 
  if(i.tg==='foe'||i.tg==='all'){ hitBoss(g,u,i.pw,i.phys,t); if(i.bind){ const push=Math.round(35*(1+(u.ctl||0))); g.atb.boss=(g.atb.boss||0)-push; u.sc.con+=Math.round(avgHit(g)*(1+(u.ctl||0))); g.ev.push({t:'msg',s:'Binding Seal! '+g.def.name+'’s turn gauge is pushed back.'}); }
   if(i.slow){ g.slow=2+(g.cover?1:0)+((u.ctl||0)>=.15?1:0); u.sc.con+=Math.round(.25*avgHit(g)*2); g.ev.push({t:'fx',id:'boss',k:'slow'},{t:'msg',s:'The Monarch is slowed!'}); } return; }
  const a=tgt||u; g.ev.push({t:'fx',id:a.id,k:i.fx});
- const HK=u.healK||1; if(i.fx==='heal'){ const v=heal(g,u,a,Math.min(i.pw*u.mat*1.1*HK,a.mx*(.35+.1*(HK-1)))); a.mp=Math.min(a.mmp,a.mp+Math.round(v*.25)); }
- else if(i.fx==='shield'){ a.buf.shield=Math.round(Math.min(i.pw*u.mat*1.1*HK,a.mx*.35)); a.buf.shieldBy=u.id; }
+ const HK=u.healK||1; if(i.fx==='heal'){ const v=heal(g,u,a,Math.min(i.pw*u.mat*1.1*HK,a.mx*(.35+.1*(HK-1))*(1+.15*((i.rk||1)-1)))); a.mp=Math.min(a.mmp,a.mp+Math.round(v*.25)); }
+ else if(i.fx==='shield'){ a.buf.shield=Math.round(Math.min(i.pw*u.mat*1.1*HK,a.mx*.35*(1+.15*((i.rk||1)-1)))); a.buf.shieldBy=u.id; }
  else if(i.fx==='dr') a.buf.dr=3; else if(i.fx==='regen'){ a.buf.regen=3; a.buf.regenV=Math.round(i.pw*u.mat*HK); }
  else if(i.fx==='crit') u.buf.crit=1; else if(i.fx==='dodge') u.buf.dodge=1; else if(i.fx==='dodge25') u.buf.dodge25=2;
  else if(i.fx==='mana'){ const v=Math.min(u.mmp-u.mp,Math.round(u.mmp*.15)); u.mp+=v; u.sc.sus+=v; } }

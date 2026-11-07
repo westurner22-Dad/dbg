@@ -80,8 +80,8 @@ function act(b){ // executes next queued action; returns {actor, line, ev:[{id,t
         if(T.fx==='mana'){ const g=Math.round(.15*u.mmp); u.mp=Math.min(u.mmp,u.mp+g); ev.push({id:u.id,txt:'+'+g+' MP',c:'#6cf'}); }
         else if(T.fx==='crit'){ u.crit=1; line+=' (next Fight crits)'; } else if(T.fx==='dodge'){ u.dodge=1; } else if(T.fx==='dodge25'){ u.dodge25=2; }
         else if(T.tg==='ally'){ const t=retarget(b,u,c.tgt,0);
-          if(T.fx==='shield'){ t.shield=Math.min(Math.round(.35*t.mx),Math.round(u.mat*T.pw)); ev.push({id:t.id,txt:'Shield '+t.shield,c:'#ff6'}); }
-          if(T.fx==='heal'){ const h=Math.min(Math.round(.35*t.mx),Math.round(u.mat*T.pw)); t.hp=Math.min(t.mx,t.hp+h); const mm=Math.round(h*.25); t.mp=Math.min(t.mmp,t.mp+mm); ev.push({id:t.id,txt:'+'+h,c:'#6f6'}); }
+          if(T.fx==='shield'){ t.shield=Math.min(Math.round(.35*t.mx*RK),Math.round(u.mat*T.pw)); ev.push({id:t.id,txt:'Shield '+t.shield,c:'#ff6'}); }
+          if(T.fx==='heal'){ const h=Math.min(Math.round(.35*t.mx*RK),Math.round(u.mat*T.pw)); t.hp=Math.min(t.mx,t.hp+h); const mm=Math.round(h*.25); t.mp=Math.min(t.mmp,t.mp+mm); ev.push({id:t.id,txt:'+'+h,c:'#6f6'}); }
           if(T.fx==='dr'){ t.dr=3; ev.push({id:t.id,txt:'Stone Skin',c:'#ccc'}); } if(T.fx==='regen'){ t.regen=3; t.regenAmt=Math.round(u.mat*T.pw); ev.push({id:t.id,txt:'Regen',c:'#6f6'}); } line+=' → '+t.name; }
         else if(T.tg==='all'){ alive(foes).forEach(t=>{ const d=hit(b,u,t,T.pw,T.phys,ev); if(T.slow&&d!=='dodged') t.slow=1; }); }
         else { const t=retarget(b,u,c.tgt,1); const d=hit(b,u,t,T.pw,T.phys,ev); if((T.slow||c.t==='Kick')&&d!=='dodged') t.slow=1; line+=` → ${t.name}: ${d==='dodged'?'miss':d+' DMG'}`; } } }

@@ -18,7 +18,7 @@ input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-bo
 .row{display:flex;flex-wrap:wrap;align-items:center}.big{font-size:22px;font-weight:bold}h2{margin:6px 0}
 .nsb{background:radial-gradient(circle at 30% 20%,#2b2f3d,#12141b 70%),repeating-linear-gradient(45deg,#0000 0 6px,#ffffff05 6px 7px);border-radius:10px;padding:6px;color:#eee;user-select:none;-webkit-user-select:none;touch-action:manipulation}.nhud{font:13px sans-serif;padding:4px 2px}.nmap{position:relative}.nban{position:absolute;left:8%;right:8%;top:40%;text-align:center;background:#000c;color:#fff;font:bold 18px sans-serif;padding:8px;border-radius:20px}.nbar{display:flex;align-items:center;gap:6px;background:#0008;border-radius:20px;padding:6px 8px;margin-top:4px}.nmsg{flex:1;font:14px sans-serif}.npill{border-radius:20px;padding:8px 14px;margin:0;background:#ff8fb8;color:#111;font-weight:bold;border:0}.nmob{background:#c9a3ff}.nsum{font:12px sans-serif;padding:6px 2px}</style></head><body><div id="app"></div>
 <script src="logic.js"></script><script src="nascent.js"></script><script src="htl2.js"></script><script src="ff.js"></script><script src="pkbattle.js"></script><script src="world.js"></script><script src="weekend.js"></script><script src="wkui.js"></script><script src="gear.js"></script><script src="spr.js"></script><script src="demo.js"></script><script>
-const $=s=>document.querySelector(s); let showCov=true, aa=null, G=null; let SKEY=location.hash==='#demo'?'dbg_demo4':'dbg_p1'; let st=JSON.parse(localStorage.getItem(SKEY)||'null')||{c:null,rounds:[]};  let w=null, sel=null, timerI=null;
+const $=s=>document.querySelector(s); let showCov=true, aa=null, G=null; let SKEY=location.hash==='#demo'?'dbg_demo5':'dbg_p1'; let st=JSON.parse(localStorage.getItem(SKEY)||'null')||{c:null,rounds:[]};  let w=null, sel=null, timerI=null;
 const save=()=>localStorage.setItem(SKEY,JSON.stringify(st));
 function log(lines){ st.c.log=(st.c.log||[]).concat(lines).slice(-80); save(); }
 function view(h){ $('#app').innerHTML=h; }
@@ -250,9 +250,9 @@ function worldOpen(){ st.world=st.world||{}; const maps=st.demo?Demo.maps():['to
 function worldMap(m){ if(st.world.map===m) return; World.stop(); st.world={map:m,beaten:st.world.beaten,pk:st.world.pk}; save(); worldOpen(); }
 function worldBattle(kind,npcId){ const q=qiState(), c=st.c, s=st.world, path=FF.ROLE2PATH[c.role]||'Body', pk=s.pk||[1,1];
  view(`<div id=pkv></div>`);
- PK.start($('#pkv'),{name:c.name||'You',path,L:c.level,trainer:kind==='trainer',hpFrac:pk[0]>0?pk[0]:1,mpFrac:pk[1],bag:q.bag,gear:st.demo?Demo.gx():(q.gear?q.gear.bonus:0),slots:q.slots,beasts:kind==='trainer'?null:World.map.beasts,lvB:World.map.lvB||0},b=>{
+ PK.start($('#pkv'),{ranks:st.demo?Demo.ranks():null,name:c.name||'You',path,L:c.level,trainer:kind==='trainer',hpFrac:pk[0]>0?pk[0]:1,mpFrac:pk[1],bag:q.bag,gear:st.demo?Demo.gx():(q.gear?q.gear.bonus:0),slots:q.slots,beasts:kind==='trainer'?null:World.map.beasts,lvB:World.map.lvB||0},b=>{
   q.bag=Object.assign({},b.bag); s.pk=[b.me.hp/b.me.mx,b.me.mp/b.me.mmp]; const lines=[];
-  if(b.result==='win'){ const xp=Math.max(0,Math.min(40,DBG.XP_GOAL-c.xpToday)), gold=Math.round((b.trainer?8+Math.floor(Math.random()*5):2+Math.floor(Math.random()*3))*(st.demo?3*(1+(st.c.realmIdx||0)):1));
+  if(b.result==='win'){ const xp=Math.max(0,Math.min(40,DBG.XP_GOAL-c.xpToday)), gold=st.demo?Math.round((b.trainer?40+Math.floor(Math.random()*11):16+Math.floor(Math.random()*9))*(1+(st.c.realmIdx||0))):(b.trainer?8+Math.floor(Math.random()*5):2+Math.floor(Math.random()*3));
    c.xpToday+=xp; q.gold+=gold; lines.push(xp?`${c.name||'You'} gained ${xp} XP!`:'Daily XP goal already met.'); lines.push(`Got ${gold} gold!`);
    if(Math.random()<.3||b.trainer){ const m=b.foe.name+' '+(b.trainer?'Banner Fang':['Pelt','Core','Scale','Feather'][Math.floor(Math.random()*4)]); q.inv.push({k:'material',n:m,val:(b.trainer?20:6)*(1+(World.map.lvB||0))}); lines.push(`Found ${m}! (sell it in the Shop)`); }
    if(xp&&c.xpToday>=DBG.XP_GOAL) lines.push('Daily XP goal reached! Meditate to grow your Qi.');
@@ -263,6 +263,6 @@ function worldBattle(kind,npcId){ const q=qiState(), c=st.c, s=st.world, path=FF
   ()=>worldOpen()); }
 
 function wkStart(x){ const c=st.c||{}; WKUI.open({...(x||{}),path:FF.ROLE2PATH[c.role]||'Body',name:c.name||'You',slots:st.qi&&st.qi.slots,back:()=>{ if(location.hash==='#weekend') history.replaceState(null,'',location.pathname); st.c?day():create(); }}); }
-if(SKEY==='dbg_demo4'&&!st.demo) st.demo=Demo.init(); if(st.demo) globalThis.DEMO_K=Demo.K;
+if(SKEY==='dbg_demo5'&&!st.demo) st.demo=Demo.init(); if(st.demo) globalThis.DEMO_K=Demo.K;
 location.hash==='#weekend'?(st.c?day():create(),wkStart()):st.c?(location.hash==='#nascent'?nasStart():day()):create();
 </script></body></html>

@@ -17,7 +17,7 @@ const MOVE_TYPE=t=>FF.TECH[t]&&FF.TECH[t].ty?FF.TECH[t].ty:FF.KIT.Light.includes
 const PB={Body:{hp:.85,dm:.85},Force:{hp:.9,dm:.9},Light:{hp:1.18,dm:1.18},Mass:{hp:1.28,dm:1.28}};
 function moves(path,L,slots){ return ['Attack'].concat((slots||FF.STARTERS[path]).filter(t=>FF.TECH[t]).slice(0,3)); } // Attack + up to 3 slotted
 function newBattle(o){ const p=FF.PATHS[o.path], L=o.L, rng=o.rng||Math.random;
-  const GO=o.gear&&typeof o.gear==='object'?o.gear:{hp:o.gear||0,atk:o.gear||0,mat:o.gear||0}; const me={name:o.name||'You',path:o.path,em:p.em,L,mx:Math.round(PB[o.path].hp*300*Math.max(1.05,p.hp)*1.45*sc(L)*(1+(GO.hp||0))),mmp:Math.round(100*p.mp*sc(L)*(1+(GO.mp||0))),atk:Math.round(80*p.atk*sc(L)*(1+(GO.atk||0))),mat:Math.round(80*p.mat*sc(L)*(1+(GO.mat||0))),spd:p.spd+1+(GO.spd||0),shield:0,dr:0,crit:0,dodge:0,cd:{}};
+  const GO=o.gear&&typeof o.gear==='object'?o.gear:{hp:o.gear||0,atk:o.gear||0,mat:o.gear||0}; const me={name:o.name||'You',path:o.path,em:p.em,L,mx:Math.round(PB[o.path].hp*300*Math.max(1.05,p.hp)*1.45*sc(L)*(1+(GO.hp||0))),mmp:Math.round(100*p.mp*sc(L)*(1+(GO.mp||0))),atk:Math.round(80*p.atk*sc(L)*(1+(GO.atk||0))),mat:Math.round(80*p.mat*sc(L)*(1+(GO.mat||0))),spd:p.spd+1+(GO.spd||0),shield:0,dr:0,crit:0,dodge:0,cd:{},rk:o.ranks||{}};
   me.hp=Math.max(1,Math.round((o.hpFrac??1)*me.mx)); me.mp=Math.round((o.mpFrac??1)*me.mmp); me.moves=moves(o.path,L,o.slots);
   const B=o.trainer?Object.assign({},TRAINER_BEAST,{hp:REN[o.path][0],atk:REN[o.path][1]}):(o.beasts&&o.beasts.length?o.beasts:BEASTS)[Math.floor(rng()*(o.beasts&&o.beasts.length?o.beasts:BEASTS).length)], bl=Math.max(1,L+(o.lvB||0)+(o.trainer?0:Math.floor(rng()*3)-1));
   const foe={name:B.n,em:B.em,ty:B.ty,L:bl,mx:Math.round(420*B.hp*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),atk:Math.round(54*B.atk*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),spd:B.spd,mv:B.mv,slow:0}; foe.mx=Math.round(foe.mx*(globalThis.DEMO_K||1)); foe.atk=Math.round(foe.atk*(globalThis.DEMO_K||1)); foe.hp=foe.mx;
@@ -31,9 +31,9 @@ function turn(b,act){ const L=[], me=b.me, f=b.foe; b.turn++;
   const mine=()=>{ if(act.k==='run'){ b.runs++; const ch=Math.min(1,me.spd/f.spd*.55+.25*b.runs); if(b.trainer){ say("No! There's no running from a trainer battle!"); return; } if(b.rng()<ch){ say('Got away safely!'); b.over=true; b.result='run'; } else say("Can't escape!"); return; }
     if(act.k==='meditate'){ const g=Math.round(.15*me.mmp); me.mp=Math.min(me.mmp,me.mp+g); say(`${me.name} used Focus Breathing! Regained ${g} MP.`); return; }
     if(act.k==='item'){ if(!(b.bag[act.t]>0)){ say(`No ${act.t} left!`); return; } b.bag[act.t]--; if(act.t==='Healing Potion'){ const h=Math.round(.5*me.mx); me.hp=Math.min(me.mx,me.hp+h); say(`${me.name} used a Healing Potion! Recovered ${h} HP.`); } else { const m=Math.round(.3*me.mmp); me.mp=Math.min(me.mmp,me.mp+m); say(`${me.name} used a Focus Crystal! Regained ${m} MP.`); } return; }
-    const t=act.t, T=FF.TECH[t]||{pw:1,phys:1}, c=cost(b,t); if(me.mp<c){ say(`Not enough mana for ${t}!`); return; } if((me.cd[t]||0)>b.turn){ say(`${t} is still recharging!`); return; } if(T.cd) me.cd[t]=b.turn+T.cd; me.mp-=c; say(`${me.name} used ${t}!`);
-    if(T.fx==='heal'){ const h=Math.min(Math.round(.35*me.mx),Math.round(me.mat*T.pw)); me.hp=Math.min(me.mx,me.hp+h); say(`${me.name} recovered ${h} HP!`); return; }
-    if(T.fx==='shield'){ me.shield=Math.min(Math.round(.35*me.mx),Math.round(me.mat*T.pw)); say(`A radiant shield absorbs ${me.shield} damage!`); return; }
+    const t=act.t, T0=FF.TECH[t]||{pw:1,phys:1}, rk=(me.rk&&me.rk[t])||1, T=rk>1?Object.assign({},T0,{pw:(T0.pw||1)*(1+.15*(rk-1))}):T0, c=cost(b,t); if(me.mp<c){ say(`Not enough mana for ${t}!`); return; } if((me.cd[t]||0)>b.turn){ say(`${t} is still recharging!`); return; } if(T.cd) me.cd[t]=b.turn+T.cd; me.mp-=c; say(`${me.name} used ${t}${rk>1?' (rank '+rk+')':''}!`);
+    if(T.fx==='heal'){ const h=Math.min(Math.round(.35*me.mx*(1+.15*(rk-1))),Math.round(me.mat*T.pw)); me.hp=Math.min(me.mx,me.hp+h); say(`${me.name} recovered ${h} HP!`); return; }
+    if(T.fx==='shield'){ me.shield=Math.min(Math.round(.35*me.mx*(1+.15*(rk-1))),Math.round(me.mat*T.pw)); say(`A radiant shield absorbs ${me.shield} damage!`); return; }
     if(T.fx==='dr'){ me.dr=3; say(`${me.name}'s skin turned to stone!`); return; } if(T.fx==='regen'){ me.regen=3; me.regenAmt=Math.round(me.mat*T.pw); say(`${me.name} draws strength from the earth!`); return; }
     if(T.fx==='crit'){ me.crit=1; say(`${me.name} is focusing on a weak point!`); return; } if(T.fx==='dodge'||T.fx==='dodge25'){ me.dodge=1; say(`${me.name}'s form flows like water!`); return; }
     const ty=MOVE_TYPE(t), r=dmgTo(b,T.phys||t==='Attack'?me.atk:me.mat,T.pw||1,ty,f.ty); let d=Math.round(r.d*PB[me.path].dm); if(me.crit&&(T.phys||t==='Attack')){ d*=2; me.crit=0; r.crit=1; }
@@ -72,13 +72,13 @@ if(typeof document!=='undefined'){
  function grid(items,sel){ return `<div class=pkm>${items.map((it,i)=>`<div class="pki ${i===cur?'on':''}" onclick="PK._tap(${i})">${i===cur?'▶':'&nbsp;'}${it}</div>`).join('')}</div>`; }
  function showMain(){ menu='main'; cur=Math.min(cur,3); $('#pkt').innerHTML=`<div class=pktx2>What will<br>${b.me.name} do?</div>`+grid(MAIN); }
  function showMoves(){ menu='moves'; const ms=b.me.moves; cur=Math.min(cur,ms.length-1); const t=ms[cur];
-  $('#pkt').innerHTML=grid(ms.map(m=>m.replace('Combat Insight','Insight').replace('Afterimage Stance','Afterimage')))+`<div class=pkinfo>TYPE/ ${api.MOVE_TYPE(t)}<br>MP ${api.cost(b,t)}/${b.me.mp}</div>`; }
+  $('#pkt').innerHTML=grid(ms.map(m=>m.replace('Combat Insight','Insight').replace('Afterimage Stance','Afterimage')))+`<div class=pkinfo>TYPE/ ${api.MOVE_TYPE(t)}${(b.me.rk&&b.me.rk[t]||1)>1?' · R'+b.me.rk[t]:''}<br>MP ${api.cost(b,t)}/${b.me.mp}</div>`; }
  function showItems(){ menu='items'; const ks=['Healing Potion','Focus Crystal']; cur=Math.min(cur,1); $('#pkt').innerHTML=grid(ks.map(k=>k+' ×'+(b.bag[k]||0))); }
  function choose(i){ if(menu==='main'){ cur=i; if(i===0){ cur=0; return showMoves(); } if(i===1){ cur=0; return showItems(); } if(i===2) return act({k:'meditate'}); return act({k:'run'}); }
   if(menu==='moves'){ const t=b.me.moves[i]; if(!t) return; if(b.me.mp<api.cost(b,t)){ cur=i; return showMoves(); } return act({k:'move',t}); }
   if(menu==='items'){ const k=['Healing Potion','Focus Crystal'][i]; if(!(b.bag[k]>0)) return; return act({k:'item',t:k}); } }
  function act(a){ cur=0; menu='text'; push(api.turn(b,a)); }
- function A(){ if(menu==='text') return next(); choose(cur); }
+ function A(){ if(!document.querySelector('#pkt')) return; if(menu==='text') return next(); choose(cur); }
  function Bk(){ if(menu==='moves'||menu==='items'){ cur=0; showMain(); } else if(menu==='text') next(); }
  function pad(d){ if(menu==='text') return; const n=menu==='main'?4:menu==='moves'?b.me.moves.length:2; const m={left:-1,right:1,up:-2,down:2}[d]; const c=cur+m; if(c>=0&&c<n) cur=c; menu==='main'?showMain():menu==='moves'?showMoves():showItems(); }
  function finish(){ if(b.rewarded){ menu='done'; return api.onExit&&api.onExit(b); } b.rewarded=1; const extra=cb(b)||[]; q.push(...extra.map(t=>({t}))); menu='text'; next(); }
