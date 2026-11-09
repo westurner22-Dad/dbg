@@ -17,32 +17,35 @@ const MOVE_TYPE=t=>FF.TECH[t]&&FF.TECH[t].ty?FF.TECH[t].ty:FF.KIT.Light.includes
 const PB={Body:{hp:.85,dm:.85},Force:{hp:.9,dm:.9},Light:{hp:1.18,dm:1.18},Mass:{hp:1.28,dm:1.28}};
 function moves(path,L,slots){ return ['Attack'].concat((slots||FF.STARTERS[path]).filter(t=>FF.TECH[t]).slice(0,3)); } // Attack + up to 3 slotted
 function newBattle(o){ const p=FF.PATHS[o.path], L=o.L, rng=o.rng||Math.random;
-  const GO=o.gear&&typeof o.gear==='object'?o.gear:{hp:o.gear||0,atk:o.gear||0,mat:o.gear||0}; const me={name:o.name||'You',path:o.path,em:p.em,L,mx:Math.round(PB[o.path].hp*300*Math.max(1.05,p.hp)*1.45*sc(L)*(1+(GO.hp||0))),mmp:Math.round(100*p.mp*sc(L)*(1+(GO.mp||0))),atk:Math.round(80*p.atk*sc(L)*(1+(GO.atk||0))),mat:Math.round(80*p.mat*sc(L)*(1+(GO.mat||0))),spd:p.spd+1+(GO.spd||0),shield:0,dr:0,crit:0,dodge:0,cd:{},rk:o.ranks||{}};
+  const GO=o.gear&&typeof o.gear==='object'?o.gear:{hp:o.gear||0,atk:o.gear||0,mat:o.gear||0}; const me={name:o.name||'You',path:o.path,em:p.em,L,mx:Math.round(PB[o.path].hp*300*Math.max(1.05,p.hp)*1.45*sc(L)*(1+(GO.hp||0))),mmp:Math.round(100*p.mp*sc(L)*(1+(GO.mp||0))),atk:Math.round(80*p.atk*sc(L)*(1+(GO.atk||0))),mat:Math.round(80*p.mat*sc(L)*(1+(GO.mat||0))),spd:p.spd+1+(GO.spd||0),shield:0,dr:0,crit:0,dodge:0,cd:{},rk:o.ranks||{},critC:GO.critC!=null?GO.critC:.0625,dodgeC:GO.dodgeC||0,blkC:GO.blkC||0,drG:GO.drG||0,uniq:GO.uniq||[]};
   me.hp=Math.max(1,Math.round((o.hpFrac??1)*me.mx)); me.mp=Math.round((o.mpFrac??1)*me.mmp); me.moves=moves(o.path,L,o.slots);
   const B=o.trainer?Object.assign({},TRAINER_BEAST,{hp:REN[o.path][0],atk:REN[o.path][1]}):(o.beasts&&o.beasts.length?o.beasts:BEASTS)[Math.floor(rng()*(o.beasts&&o.beasts.length?o.beasts:BEASTS).length)], bl=Math.max(1,L+(o.lvB||0)+(o.trainer?0:Math.floor(rng()*3)-1));
-  const foe={name:B.n,em:B.em,ty:B.ty,L:bl,mx:Math.round(420*B.hp*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),atk:Math.round(54*B.atk*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),spd:B.spd,mv:B.mv,slow:0}; foe.mx=Math.round(foe.mx*(globalThis.DEMO_K||1)); foe.atk=Math.round(foe.atk*(globalThis.DEMO_K||1)); foe.hp=foe.mx;
-  return {me,foe,rng,turn:0,over:false,result:null,runs:0,bag:Object.assign({},o.bag||{}),trainer:!!o.trainer}; }
+  const foe={name:B.n,em:B.em,ty:B.ty,L:bl,mx:Math.round(420*B.hp*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),atk:Math.round(54*B.atk*sc(bl)*(o.trainer?1:(.98+.008*(L-1)))),spd:B.spd,mv:B.mv,slow:0}; foe.mx=Math.round(foe.mx*(globalThis.DEMO_K||1)); foe.atk=Math.round(foe.atk*(globalThis.DEMO_K||1));
+   if(o.rare){ Object.assign(foe,{name:o.rare.n,em:o.rare.em,ty:o.rare.ty,mv:o.rare.mv,spd:o.rare.spd}); foe.mx=Math.round(foe.mx*o.rare.hp); foe.atk=Math.round(foe.atk*o.rare.atk); foe.rare=1; }
+   else if(o.elite){ foe.name='Elite '+foe.name; foe.mx=Math.round(foe.mx*2.5); foe.atk=Math.round(foe.atk*1.1); foe.elite=1; foe.mv2=foe.mv+' (empowered)'; }
+   foe.hp=foe.mx;
+  return {me,foe,rng,turn:0,over:false,result:null,runs:0,bag:Object.assign({},o.bag||{}),trainer:!!o.trainer,casts:0,crits:0,pots:0,potK:GO.potK||1}; }
 const cost=(b,t)=>t==='Attack'?0:Math.round(FF.TECH[t].tier*.1*b.me.mmp);
-function dmgTo(b,base,pw,ty,defTy,lines,target){ const e=eff(ty,defTy); let d=base*pw*e*(0.85+b.rng()*.3); const crit=b.rng()<.0625; if(crit) d*=1.5; d=Math.max(1,Math.round(d)); return {d,e,crit}; }
+function dmgTo(b,base,pw,ty,defTy,lines,target,cc,ck){ const e=eff(ty,defTy); let d=base*pw*e*(0.85+b.rng()*.3); const crit=b.rng()<(cc!=null?cc:.0625); if(crit) d*=ck||1.5; d=Math.max(1,Math.round(d)); return {d,e,crit}; }
 // player action: {k:'move',t} | {k:'item',t} | {k:'meditate'} | {k:'run'}; returns lines [{t, fx}] where fx mutates display state
 function turn(b,act){ const L=[], me=b.me, f=b.foe; b.turn++;
   const say=(t,fx)=>L.push({t,fx});
   const meFirst=act.k!=='move'||f.slow?true:(me.spd+(b.rng()-.5)*2>=f.spd); f.slow=Math.max(0,f.slow-1);
   const mine=()=>{ if(act.k==='run'){ b.runs++; const ch=Math.min(1,me.spd/f.spd*.55+.25*b.runs); if(b.trainer){ say("No! There's no running from a trainer battle!"); return; } if(b.rng()<ch){ say('Got away safely!'); b.over=true; b.result='run'; } else say("Can't escape!"); return; }
     if(act.k==='meditate'){ const g=Math.round(.15*me.mmp); me.mp=Math.min(me.mmp,me.mp+g); say(`${me.name} used Focus Breathing! Regained ${g} MP.`); return; }
-    if(act.k==='item'){ if(!(b.bag[act.t]>0)){ say(`No ${act.t} left!`); return; } b.bag[act.t]--; if(act.t==='Healing Potion'){ const h=Math.round(.5*me.mx); me.hp=Math.min(me.mx,me.hp+h); say(`${me.name} used a Healing Potion! Recovered ${h} HP.`); } else { const m=Math.round(.3*me.mmp); me.mp=Math.min(me.mmp,me.mp+m); say(`${me.name} used a Focus Crystal! Regained ${m} MP.`); } return; }
-    const t=act.t, T0=FF.TECH[t]||{pw:1,phys:1}, rk=(me.rk&&me.rk[t])||1, T=rk>1?Object.assign({},T0,{pw:(T0.pw||1)*(1+.15*(rk-1))}):T0, c=cost(b,t); if(me.mp<c){ say(`Not enough mana for ${t}!`); return; } if((me.cd[t]||0)>b.turn){ say(`${t} is still recharging!`); return; } if(T.cd) me.cd[t]=b.turn+T.cd; me.mp-=c; say(`${me.name} used ${t}${rk>1?' (rank '+rk+')':''}!`);
+    if(act.k==='item'){ if(!(b.bag[act.t]>0)){ say(`No ${act.t} left!`); return; } b.bag[act.t]--; if(act.t==='Healing Potion'){ b.pots++; const h=Math.round(Math.min(.75,.5*(b.potK||1))*me.mx); me.hp=Math.min(me.mx,me.hp+h); say(`${me.name} used a Healing Potion! Recovered ${h} HP.`); } else { const m=Math.round(.3*me.mmp); me.mp=Math.min(me.mmp,me.mp+m); say(`${me.name} used a Focus Crystal! Regained ${m} MP.`); } return; }
+    const t=act.t, T0=FF.TECH[t]||{pw:1,phys:1}, rk=(me.rk&&me.rk[t])||1, T=rk>1?Object.assign({},T0,{pw:(T0.pw||1)*(1+.15*(rk-1))}):T0, c=cost(b,t); if(me.mp<c){ say(`Not enough mana for ${t}!`); return; } if((me.cd[t]||0)>b.turn){ say(`${t} is still recharging!`); return; } if(T.cd) me.cd[t]=b.turn+T.cd; me.mp-=c; if(t!=='Attack') b.casts++; say(`${me.name} used ${t}${rk>1?' (rank '+rk+')':''}!`);
     if(T.fx==='heal'){ const h=Math.min(Math.round(.35*me.mx*(1+.15*(rk-1))),Math.round(me.mat*T.pw)); me.hp=Math.min(me.mx,me.hp+h); say(`${me.name} recovered ${h} HP!`); return; }
     if(T.fx==='shield'){ me.shield=Math.min(Math.round(.35*me.mx*(1+.15*(rk-1))),Math.round(me.mat*T.pw)); say(`A radiant shield absorbs ${me.shield} damage!`); return; }
     if(T.fx==='dr'){ me.dr=3; say(`${me.name}'s skin turned to stone!`); return; } if(T.fx==='regen'){ me.regen=3; me.regenAmt=Math.round(me.mat*T.pw); say(`${me.name} draws strength from the earth!`); return; }
     if(T.fx==='crit'){ me.crit=1; say(`${me.name} is focusing on a weak point!`); return; } if(T.fx==='dodge'||T.fx==='dodge25'){ me.dodge=1; say(`${me.name}'s form flows like water!`); return; }
-    const ty=MOVE_TYPE(t), r=dmgTo(b,T.phys||t==='Attack'?me.atk:me.mat,T.pw||1,ty,f.ty); let d=Math.round(r.d*PB[me.path].dm); if(me.crit&&(T.phys||t==='Attack')){ d*=2; me.crit=0; r.crit=1; }
+    const ty=MOVE_TYPE(t), r=dmgTo(b,T.phys||t==='Attack'?me.atk:me.mat,T.pw||1,ty,f.ty,null,null,me.critC,me.uniq.includes('heaven')?2:1.5); let d=Math.round(r.d*PB[me.path].dm); if(me.crit&&(T.phys||t==='Attack')){ d*=2; me.crit=0; r.crit=1; } if(r.crit) b.crits++; if(me.uniq.includes('vamp')) me.hp=Math.min(me.mx,me.hp+Math.round(d*.1));
     f.hp=Math.max(0,f.hp-d); say(null,{hit:'foe',d});
     if(r.crit) say('A critical hit!'); if(r.e>1) say("It's super effective!"); if(r.e<1) say("It's not very effective...");
     if((T.slow||t==='Kick')&&f.hp>0){ f.slow=1; say(`${f.name} was slowed!`); } };
-  const theirs=()=>{ if(b.over||f.hp<=0) return; const special=b.rng()<.35, pw=special?1.3:1, ty=special?f.ty:'Body';
-    say(`${b.trainer?'':'Wild '}${f.name} used ${special?f.mv:'Tackle'}!`); if(me.dodge){ me.dodge=0; say(`${me.name} dodged!`); return; }
-    const r=dmgTo(b,f.atk,pw,ty,me.path==='Body'?'Body':me.path); let d=r.d; if(me.dr>0) d=Math.round(d*.8); if(me.shield){ const s=Math.min(me.shield,d); me.shield-=s; d-=s; }
+  const theirs=()=>{ if(b.over||f.hp<=0) return; const special=b.rng()<(f.elite?.55:.35), pw=special?(f.elite?1.45:1.3):1, ty=special?f.ty:'Body';
+    say(`${b.trainer?'':'Wild '}${f.name} used ${special?(f.elite?f.mv2:f.mv):'Tackle'}!`); if(me.dodge||(me.dodgeC&&b.rng()<me.dodgeC)){ me.dodge=0; say(`${me.name} dodged!`); return; }
+    const r=dmgTo(b,f.atk,pw,ty,me.path==='Body'?'Body':me.path); let d=r.d; if(me.dr>0) d=Math.round(d*.8); if(me.drG) d=Math.round(d*(1-Math.min(.6,me.drG))); if(me.blkC&&b.rng()<me.blkC){ d=Math.round(d*(me.uniq.includes('bulwark')?.25:.5)); say(`${me.name} blocked!`); } if(me.shield){ const s=Math.min(me.shield,d); me.shield-=s; d-=s; }
     me.hp=Math.max(0,me.hp-d); say(null,{hit:'me',d}); if(r.crit) say('A critical hit!'); if(r.e>1) say("It's super effective!"); if(r.e<1) say("It's not very effective..."); };
   if(meFirst){ mine(); check(b,say); theirs(); } else { theirs(); check(b,say); mine(); } check(b,say);
   if(!b.over){ if(me.regen>0){ me.regen--; me.hp=Math.min(me.mx,me.hp+me.regenAmt); say(`${me.name} regained health from the earth.`); } if(me.dr>0) me.dr--; }

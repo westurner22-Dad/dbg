@@ -65,7 +65,7 @@ function face(){ const [dx,dy]=DIRS[w.dir]; return [w.x+dx,w.y+dy]; }
 function A(){ if(txt) return closeTxt(); if(busy||mv) return; const [fx,fy]=face(), n=npcAt(w,fx,fy);
   if(n){ const back={up:'down',down:'up',left:'right',right:'left'}[w.dir]; w.npc[n.id].dir=back; const custom=hooks.talk&&hooks.talk(n.id);
     if(n.trainer&&!w.beaten[n.id]) return trainerFight(n); return say(custom||(n.trainer?n.after:n.line)); }
-  if(tile(fx,fy)==='R'||tile(w.x,w.y)==='R') { w.hp=null; w.pk=null; save(); return say('You pray at the shrine. Your cultivator is fully restored!',()=>hooks.menu&&(stop(),hooks.menu('shrine'))); }
+  if(tile(fx,fy)==='R'||tile(w.x,w.y)==='R') { const sh=hooks.shrine?hooks.shrine(w):{heal:1,msg:'You pray at the shrine. Your cultivator is fully restored!'}; if(sh.heal){ w.hp=null; w.pk=null; } save(); return say(sh.msg,()=>hooks.menu&&(stop(),hooks.menu('shrine'))); }
   const pk=hooks.poke&&hooks.poke(fx,fy,tile(fx,fy)); if(pk) return say(pk);
   if(tile(fx,fy)==='D') return say('The door is locked. (Interiors come later.)'); }
 function B(){ if(txt) return closeTxt(); if(busy||mv) return; if(hooks.menu){ stop(); return hooks.menu('menu'); } say('Menu: A to keep exploring.  Progress saves automatically. (Leave with the ✕ button.)'); }
@@ -74,7 +74,7 @@ function step(){ if(mv||txt||busy||!held) return; const d=held; const [dx,dy]=DI
   let nx=w.x+dx, ny=w.y+dy; if(!passable(w,nx,ny,dy)) return;
   if(tile(nx,ny)==='L') ny+=1; // hop over ledge
   mv={fx:w.x,fy:w.y,t:0,dur:tile(w.x+dx,w.y+dy)==='L'?.32:.18}; w.x=nx; w.y=ny; }
-function arrive(){ w.steps++; save(); if(checkTrainers()) return; if(tile(w.x,w.y)==='G'&&rng()<1/12) encounter('wild'); }
+function arrive(){ w.steps++; if(w.repel>0) w.repel--; save(); if(checkTrainers()) return; if(tile(w.x,w.y)==='G'&&rng()<1/12){ if(w.repel>0) return; encounter('wild'); } }
 function checkTrainers(){ for(const n of NPCS){ if(!n.trainer||w.beaten[n.id]) continue; const p=w.npc[n.id], [dx,dy]=DIRS[p.dir];
     for(let i=1;i<=n.range;i++){ const x=p.x+dx*i,y=p.y+dy*i; if('THw'.includes(tile(x,y))) break; if(x===w.x&&y===w.y){ spot(n,i); return true; } } } return false; }
 function spot(n,dist){ busy=true; const p=w.npc[n.id], [dx,dy]=DIRS[p.dir]; p.alert=1; let k=dist-1;
