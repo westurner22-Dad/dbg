@@ -9,28 +9,24 @@ const ADJ=[...Array(N).keys()].map(nb);
 const HOMES=[[[0,0],[1,0],[0,1],[1,1],[0,2]],[[4,0],[3,0],[4,1],[3,1],[4,2]],[[0,7],[1,7],[0,6],[1,6],[0,5]],[[4,7],[3,7],[4,6],[3,6],[4,5]]].map(h=>h.map(([x,y])=>id(x,y)));
 let NAMES=['You','Green','Blue','Gold','Ruin'], COLS=['#ff8fb8','#7fe08a','#7fb8ff','#ffd66b','#8a8f9c'];
 const GT={D:'🛡️',A:'⚔️',S:'🧠'};
-// p28 strategic territories (cultivation_19/22): Gold Mine, Spirit Forest, Ancient Ruins, Cultivation Nexus. Buildings: h.b = 'tower' | 'road'
-const STRAT={gold:16,forest:18,ruins:21,nexus:23};
-const owns=(G,p,k)=>G.hex[STRAT[k]]&&G.hex[STRAT[k]].o===p;
-function canAttack(G,f,t){ const A=G.hex[f]; if(!A||A.o===G.hex[t].o||A.a<2) return false; if(ADJ[f].includes(t)) return true; return A.b==='road'&&ADJ[f].some(j=>ADJ[j].includes(t)&&j!==t); }
 function newGame(o={}){ const r=o.rng||Math.random, me=o.path||'Body', paths=[me].concat(['Body','Force','Light','Mass'].filter(p=>p!==me)).concat(['Body']);
   const hex=[...Array(N)].map((_,i)=>({o:RUIN,a:3+Math.floor(r()*3),home:-1,g:null}));
   HOMES.forEach((h,p)=>h.forEach((i,k)=>{ hex[i]={o:p,a:k?4:6,home:p,g:k<2?['D','A','S'][Math.floor(r()*3)]:null}; }));
   return {rng:r,hex,paths,turn:0,round:1,maxRound:o.maxRound||15,cur:0,mob:[0,0,0,0,0],gens:[2,2,2,2,0],over:false,log:[],human:o.human??0}; }
 const capOf=(G,i)=>{ const h=G.hex[i]; return h.home>=0&&G.mob[h.o]?40:CAP; };
-function regen(G,p){ G.hex.forEach((h,i)=>{ if(h.o!==p) return; const m=h.home>=0&&G.mob[p]?.5:.25; h.a=Math.min(capOf(G,i),h.a+Math.max(1,Math.round(h.a*m))); }); if(p<4&&owns(G,p,'forest')){ const i=STRAT.forest; G.hex[i].a=Math.min(capOf(G,i),G.hex[i].a+1); } }
+function regen(G,p){ G.hex.forEach((h,i)=>{ if(h.o!==p) return; const m=h.home>=0&&G.mob[p]?.5:.25; h.a=Math.min(capOf(G,i),h.a+Math.max(1,Math.round(h.a*m))); }); }
 function mobilize(G,p){ if(G.mob[p]) return 'Already mobilized.'; G.mob[p]=1; return NAMES[p]+': Sovereign Mobilization! Homeland cap 40, regen 50%.'; }
 const d20=G=>1+Math.floor(G.rng()*20);
 const BANDS=[[2,1,2],[5,1,4],[8,-1,6],[99,0,8]]; // gap<=x: winner loses w (-1 = 0-1), loser loses l
-function attack(G,f,t){ const A=G.hex[f], D=G.hex[t]; if(!canAttack(G,f,t)) return null;
-  const ra=d20(G), rd=d20(G), ba=Math.floor(A.a/2)+eff(G.paths[A.o],G.paths[D.o]), bd=Math.floor(D.a/2)+eff(G.paths[D.o],G.paths[A.o])+(D.home>=0?2:0)+(D.b==='tower'?1:0); const bonusA=A.o<4&&owns(G,A.o,'ruins')?1:0;
-  const ta=ra+ba+bonusA, td=rd+bd, aw=ta>td, gap=Math.abs(ta-td), band=BANDS.find(b=>gap<=b[0]);
+function attack(G,f,t){ const A=G.hex[f], D=G.hex[t]; if(A.o===D.o||!ADJ[f].includes(t)||A.a<2) return null;
+  const ra=d20(G), rd=d20(G), ba=Math.floor(A.a/2)+eff(G.paths[A.o],G.paths[D.o]), bd=Math.floor(D.a/2)+eff(G.paths[D.o],G.paths[A.o])+(D.home>=0?2:0);
+  const ta=ra+ba, td=rd+bd, aw=ta>td, gap=Math.abs(ta-td), band=BANDS.find(b=>gap<=b[0]);
   let wl=band[1]<0?Math.floor(G.rng()*2):band[1], ll=band[2]; const wG=aw?A.g:D.g, lG=aw?D.g:A.g;
   if(wG==='A') ll++; let la=aw?wl:ll, ld=aw?ll:wl;
   if(D.g==='D') ld=Math.max(0,ld-1); if(D.home>=0) ld=Math.max(0,ld-1); if(A.g==='S') la=Math.floor(la/2);
   la=Math.min(la,A.a-1); const res={f,t,ra,rd,ta,td,ba,bd,aw,la,ld:Math.min(ld,D.a),cap:false,gen:null,ap:A.o,dp:D.o};
   A.a-=la; D.a-=ld; if(D.home>=0) D.a=Math.max(1,D.a);
-  if(D.a<=0){ res.cap=true; D.b=null; D.o=A.o; D.a=A.a-1; A.a=1; if(D.g&&res.dp!==A.o){ G.gens[res.dp]--; D.g=null; } }
+  if(D.a<=0){ res.cap=true; D.o=A.o; D.a=A.a-1; A.a=1; if(D.g&&res.dp!==A.o){ G.gens[res.dp]--; D.g=null; } }
   if(aw&&ra===20&&gap>=10&&G.gens[A.o]<4){ const spot=[f,t].concat(G.hex.map((_,i)=>i)).find(i=>G.hex[i].o===A.o&&!G.hex[i].g); if(spot!=null){ G.hex[spot].g=['D','A','S'][Math.floor(G.rng()*3)]; G.gens[A.o]++; res.gen='gain'; } }
   if(!aw&&ra===1&&gap>=10&&A.g){ A.g=null; G.gens[A.o]--; res.gen='lose'; }
   return res; }
@@ -47,7 +43,7 @@ function aiMoves(G,p){ // greedy: best odds adjacent attack; Ruin mostly defends
   return best&&best.v>=(p===RUIN?4:1)?best:null; }
 function aiTurn(G,p){ const out=[]; if(!G.mob[p]&&p!==RUIN&&count(G,p)<=6&&G.round>=3) out.push({mob:1});
   const lim=p===RUIN?(G.rng()<.35?1:0):6; return {lim,out}; }
-function startTurn(G){ G.phase='attack'; G.moved=0; const p=G.cur; if(p<4&&!G.mob[p]&&G.hex.some(h=>h.o===p)&&G.hex.every(h=>h.o!==p||h.home===p)){ G.mob[p]=1; G.log.push(NAMES[p]+': Sovereign Mobilization (only homelands left)!'); } regen(G,G.cur); G.attacksLeft=G.cur===RUIN?(G.rng()<.35?1:0):99; }
+function startTurn(G){ G.phase='attack'; G.moved=0; regen(G,G.cur); G.attacksLeft=G.cur===RUIN?(G.rng()<.35?1:0):99; }
 function endTurn(G){ G.cur=(G.cur+1)%5; if(G.ruinEnd&&!G.ruinFell&&!G.hex.some(h=>h.o===4)){ G.ruinFell='cleared'; G.clearRound=G.round; if(!G.pvp){ G.over=true; return; } G.log.push('The last gray hex falls! Rivals may keep fighting until the weekend.'); }
  if(G.cur===4&&G.ruinFell) G.cur=0; if(G.cur===0){ G.round++; if(G.ruinEnd&&G.round%(G.ruinDecay||1)===0) G.hex.forEach(h=>{ if(h.o===4&&h.a>1) h.a--; }); if(G.round>G.maxRound&&!G.ruinFell){ if(G.ruinEnd){ let n=0; for(let k=0;k<6;k++) G.hex.forEach((h,i)=>{ if(h.o!==4) return; const c=[0,0,0,0]; nb(i).forEach(j=>{ const o=G.hex[j].o; if(o<4) c[o]++; }); const b=c.indexOf(Math.max(...c)); if(c[b]>0){ h.o=b; h.a=1; n++; } }); G.hex.forEach(h=>{ if(h.o===4){ h.o=0; h.a=1; } }); G.ruinFell='collapsed'; G.clearRound=G.round; } if(!G.pvp) G.over=true; } } if(!G.over) startTurn(G); }
 function aiStep(G){ // one AI action; returns result or null when done
@@ -57,7 +53,7 @@ function shrinkRuin(G,n){ const grayN=()=>G.hex.filter(h=>h.o===RUIN).length; le
   while(grayN()>n&&guard++<200){ const own=G.hex.map((h,i)=>i).filter(i=>G.hex[i].o===p), home=HOMES[p][0], [hx,hy]=xy(home);
    const c=G.hex.map((h,i)=>i).filter(i=>G.hex[i].o===RUIN&&ADJ[i].some(j=>own.includes(j))).sort((a,b)=>{ const [ax,ay]=xy(a),[bx,by]=xy(b); return (Math.abs(ax-hx)+Math.abs(ay-hy))-(Math.abs(bx-hx)+Math.abs(by-hy)); })[0];
    if(c!=null){ G.hex[c].o=p; G.hex[c].a=3; } p=(p+1)%4; } }
-const api={STRAT,canAttack,shrinkRuin,reach,moveTroops,aiMove,W,H,N,ADJ,HOMES,NAMES,COLS,GT,RUIN,newGame,attack,moveGen,mobilize,regen,count,armies,startTurn,endTurn,aiStep,capOf};
+const api={shrinkRuin,reach,moveTroops,aiMove,W,H,N,ADJ,HOMES,NAMES,COLS,GT,RUIN,newGame,attack,moveGen,mobilize,regen,count,armies,startTurn,endTurn,aiStep,capOf};
 // ---------------- UI ----------------
 if(typeof document!=='undefined'){
  let G,el,mv=null,sel=null,gsel=null,ff=false,tm=0,msg='',banner='',hooks;

@@ -72,7 +72,7 @@ const RARE={town:{n:'Golden Moon Hare',em:'🐇',ty:'Light',hp:1.6,atk:1.0,spd:1
 function encounter(st,mapId,today){ const d=st.demo; ensure(st); const out={elite:false,rare:null};
  if(d.rareDay!==today){ d.rareDay=today; if(Math.random()<.025) out.rare=RARE[mapId]||RARE.town; }
  if(!out.rare&&mapId!=='town'){ const p=(1/15)*(d.phys.am==='senses'?1.25:1); out.elite=Math.random()<p; } return out; }
-function goldK(st){ const d=st.demo||{}; let k=1; if(d.phys&&d.phys.am==='merchant') k*=1.05; if(st.nas2&&st.nas2.mob&&st.c.slot&&st.nas2.mob[st.c.slot-1]&&(st.c.realmIdx||0)===3) k*=1.25; return k; }
+function goldK(st){ const d=st.demo||{}; let k=1; if(d.phys&&d.phys.am==='merchant') k*=1.05; return k; }
 // ---- Bounty board: 3 quests/day, 10–15 gold
 const BTYPES=[['beasts','Defeat 3 wild beasts',3],['Light','Defeat a Light-type beast',1],['Mass','Defeat a Mass-type beast',1],['Force','Defeat a Force-type beast',1],['Body','Defeat a Body-type beast',1],['mat','Bring back a beast material',1],['tech','Win a fight using a technique',1]];
 function bounties(st,today){ const d=st.demo; if(!d.bounty||d.bounty.date!==today){ const pool=BTYPES.slice(), list=[]; for(let i=0;i<3;i++){ const b=pool.splice(Math.floor(Math.random()*pool.length),1)[0]; list.push({k:b[0],t:b[1],need:b[2],have:0,gold:10+Math.floor(Math.random()*6),done:false}); } d.bounty={date:today,list}; } return d.bounty.list; }

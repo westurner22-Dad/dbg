@@ -1,17 +1,19 @@
 // p20 shared layered character sprite: base per path (img/*.png) + hair colour + gear layers + tint (foe/unit). Used by every mode.
 (function(root){ const imgs={}, cache={};
 const load=p=>imgs[p]||(imgs[p]=Object.assign(new Image(),{src:'img/'+p+'.png'}));
+// p29: generated portrait as the character's base image (CORS-enabled URL); falls back to the path sprite until/unless it loads
+const loadX=u=>{ if(imgs[u]) return imgs[u]; const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>{ try{ root.PORT&&PORT.refresh&&PORT.refresh(); }catch(e){} }; i.src=u; return imgs[u]=i; };
 ['body','force','light','mass','ape','dildo'].forEach(load);
 // p27 live rule: seats 2-4 always hold the big blue item in the main hand (cosmetic only); seat 1 shows real gear.
 const viewerSeat=()=>{ try{ return +((root.Family&&root.Family.seat)||(typeof st!=='undefined'&&st&&st.c&&st.c.slot)||0); }catch(e){ return 0; } };
 const wantsDildo=o=>o.dildo!=null?!!o.dildo:(!o.tint&&!!root.LIVE&&viewerSeat()>=2);
 const RC={Common:'#cfd3da',Rare:'#4af',Epic:'#c6f',Legendary:'#fa3'};
 const TINT={foe:[200,70,70],gray:[140,140,150],Spear:[120,170,255],Archer:[120,220,120],Healer:[255,255,255],General:[255,210,60]};
-function make(o){ o=Object.assign({},o||{}); o.dildo=wantsDildo(o); const p=(o.path||'body').toLowerCase(), key=JSON.stringify(o); if(cache[key]) return cache[key]; const im=load(p), dz=load('dildo'); if(!im.complete||!im.naturalWidth) return null; if(o.dildo&&(!dz.complete||!dz.naturalWidth)) return null;
- const W=im.naturalWidth, H=im.naturalHeight, c=document.createElement('canvas'); c.width=W+(o.dildo?34:16); c.height=H; const x=c.getContext('2d'); x.drawImage(im,8,0);
+function make(o){ o=Object.assign({},o||{}); o.dildo=wantsDildo(o); let pim=null; if(o.portrait&&!o.tint){ const q=loadX(o.portrait); if(q.complete&&q.naturalWidth) pim=q; else delete o.portrait; } else delete o.portrait; const p=(o.path||'body').toLowerCase(), key=JSON.stringify(o); if(cache[key]) return cache[key]; const im=load(p), dz=load('dildo'); if(!im.complete||!im.naturalWidth) return null; if(o.dildo&&(!dz.complete||!dz.naturalWidth)) return null;
+ const W=im.naturalWidth, H=im.naturalHeight, c=document.createElement('canvas'); c.width=W+(o.dildo?34:16); c.height=H; const x=c.getContext('2d'); if(pim){ const r=Math.max(W/pim.naturalWidth,H/pim.naturalHeight), sw=W/r, sh=H/r; x.save(); x.beginPath(); if(x.roundRect) x.roundRect(8,0,W,H,8); else x.rect(8,0,W,H); x.clip(); x.drawImage(pim,(pim.naturalWidth-sw)/2,(pim.naturalHeight-sh)/2,sw,sh,8,0,W,H); x.restore(); } else x.drawImage(im,8,0);
  const tn=TINT[o.tint]; if(tn){ const d=x.getImageData(0,0,c.width,H), a=d.data; for(let i=0;i<a.length;i+=4){ if(!a[i+3]) continue; const l=(a[i]*.3+a[i+1]*.59+a[i+2]*.11)/255; a[i]=a[i]*.35+tn[0]*l*.9; a[i+1]=a[i+1]*.35+tn[1]*l*.9; a[i+2]=a[i+2]*.35+tn[2]*l*.9; } x.putImageData(d,0,0); }
- if(o.hair){ x.save(); x.globalCompositeOperation='source-atop'; x.globalAlpha=.55; x.fillStyle=o.hair; x.fillRect(0,0,c.width,H*.11); x.restore(); }
- const g=o.gear||{}; x.lineWidth=3;
+ if(o.hair&&!pim){ x.save(); x.globalCompositeOperation='source-atop'; x.globalAlpha=.55; x.fillStyle=o.hair; x.fillRect(0,0,c.width,H*.11); x.restore(); }
+ const g=pim?{}:(o.gear||{}); x.lineWidth=3;
  if(g.head){ x.fillStyle=RC[g.head]; x.globalAlpha=.9; x.fillRect(W*.3+8,H*.1,W*.4,4); x.globalAlpha=1; }
  if(g.armor){ x.save(); x.globalCompositeOperation='source-atop'; x.globalAlpha=.22; x.fillStyle=RC[g.armor]; x.fillRect(0,H*.3,c.width,H*.3); x.restore(); }
  if(o.dildo){ const dh=H*.62, dw=dh*dz.naturalWidth/dz.naturalHeight; x.save(); x.translate(W+12,H*.62); x.rotate(.26); x.drawImage(dz,-dw/2,-dh*.72,dw,dh); x.restore(); }
