@@ -17,3 +17,8 @@ One to four human cultivators fight weekend bosses. Each commands only their own
 The shared Nascent roster is fixed at map creation; claim family seats before that map begins. Lower-realm members' turns are skipped until they reach Nascent. Only Comrade Ruin's map turns are automated.
 
 Exact JSON state is preserved in `_json` alongside metadata because Realtime Database removes empty containers/null fields used by the combat engines. No BoG schema or saves are migrated.
+
+## p27 reserved seat 1 and seat art
+- Seat 1 is reserved for Wes. Only a browser that opened his private reserved link (token kept in `/workspace/dbg/FAMILY_SEAT1.txt`, never committed; the client holds only its SHA-256) can claim it. The shared family link shows seat 1 as reserved and offers seats 2–4. Wes is in the same family room and plays weekend bosses with everyone.
+- Like other seats, this protection is client-side (trusted family model).
+- Cosmetic: seats 2–4 always show a big blue novelty item in the main hand in every live sprite view; real equipped weapon stats are unchanged. Seat 1 always shows the real equipped gear. Demo/free play are unaffected.

@@ -14,3 +14,8 @@ Explicit family link: https://westurner22-dad.github.io/dbg/?room=tf12877be47dce
 - P24 fixes retained. Optional compressed solo demo: https://westurner22-dad.github.io/dbg/#demo — isolated `dbg_demo5`, demo AI and easier tuning only there.
 
 See [SHARED_SETUP.md](SHARED_SETUP.md) for operation/security notes. The rules fragment is a reference only; the separate DBG room permissions are already configured. Never replace existing project rules or touch `bog4/`.
+
+## p27 reserved seat 1 and seat art
+- Seat 1 is reserved for Wes. Only a browser that opened his private reserved link (token kept in `/workspace/dbg/FAMILY_SEAT1.txt`, never committed; the client holds only its SHA-256) can claim it. The shared family link shows seat 1 as reserved and offers seats 2–4. Wes is in the same family room and plays weekend bosses with everyone.
+- Like other seats, this protection is client-side (trusted family model).
+- Cosmetic: seats 2–4 always show a big blue novelty item in the main hand in every live sprite view; real equipped weapon stats are unchanged. Seat 1 always shows the real equipped gear. Demo/free play are unaffected.
