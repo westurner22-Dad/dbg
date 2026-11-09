@@ -3,23 +3,8 @@
     "v1": {
       "rooms": {
         "$room": {
-          ".read": "auth != null",
-          "seats": {
-            "$seat": {
-              ".write": "auth != null && ($seat === '1' || $seat === '2' || $seat === '3' || $seat === '4') && (!data.exists() || data.child('ownerUid').val() === auth.uid)",
-              ".validate": "newData.hasChildren(['ownerUid','campaign']) && newData.child('ownerUid').val() === auth.uid && newData.child('campaign/c').exists() && newData.child('_json').isString()"
-            }
-          },
-          "battles": {
-            "$battle": {
-              ".write": "auth != null && (root.child('dbg/v1/rooms').child($room).child('seats/1/ownerUid').val() === auth.uid || root.child('dbg/v1/rooms').child($room).child('seats/2/ownerUid').val() === auth.uid || root.child('dbg/v1/rooms').child($room).child('seats/3/ownerUid').val() === auth.uid || root.child('dbg/v1/rooms').child($room).child('seats/4/ownerUid').val() === auth.uid) && (!data.exists() || data.child('g/over').val() === 'wipe' || data.child('g/over').val() === 'escape' || root.child('dbg/v1/rooms').child($room).child('seats').child(data.child('turnSeat').val()+'').child('ownerUid').val() === auth.uid)",
-              ".validate": "newData.hasChildren(['id','stage','roster','g','turnSeat','version']) && newData.child('turnSeat').isNumber() && newData.child('version').isNumber() && newData.child('_json').isString()"
-            }
-          },
-          "map": {
-            ".write": "auth != null && (root.child('dbg/v1/rooms').child($room).child('seats/1/ownerUid').val() === auth.uid || root.child('dbg/v1/rooms').child($room).child('seats/2/ownerUid').val() === auth.uid || root.child('dbg/v1/rooms').child($room).child('seats/3/ownerUid').val() === auth.uid || root.child('dbg/v1/rooms').child($room).child('seats/4/ownerUid').val() === auth.uid) && (!data.exists() || root.child('dbg/v1/rooms').child($room).child('seats').child(data.child('turnSeat').val()+'').child('ownerUid').val() === auth.uid)",
-            ".validate": "newData.hasChildren(['g','roster','turnSeat','version']) && newData.child('_json').isString()"
-          }
+          ".read": "$room.length >= 24",
+          ".write": "$room.length >= 24"
         }
       }
     }

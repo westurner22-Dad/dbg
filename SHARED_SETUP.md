@@ -1,22 +1,19 @@
-# Human-only family campaign: backend setup required
+# Shared family campaign — no Auth required
 
-The live build has NO AI companions. It deliberately stops at a connection lobby until Firebase is authorized. Do not call it ready to play until a real two-device test succeeds.
+Default room: `tf12877be47dce189748041f6d97cdf8c3`
+Family URL: https://westurner22-dad.github.io/dbg/
+Explicit room URL: https://westurner22-dad.github.io/dbg/?room=tf12877be47dce189748041f6d97cdf8c3
 
-The existing Firebase endpoint returns HTTP 401 Permission denied for `dbg/family/seats`. No writes were attempted to that service; no `bog4/` data or rules were changed.
+The Firebase project already grants room-wide unauthenticated read/write when the DBG room code is at least 24 characters. No Firebase Auth provider, API key, billing change, or anonymous account is needed. Do not modify any existing `bog4/`, games or chat rules/data.
 
-A Firebase project owner needs to:
-1. Enable Firebase Authentication's Anonymous sign-in provider (leave existing providers alone).
-2. Obtain the public Firebase web API key for this project and put it in `dbg-config.js` as `apiKey`. This is public application configuration, NOT a service-account private key or database secret. Do not add admin credentials to this static website.
-3. Review `firebase-dbg-rules.fragment.json`. Merge its `dbg` child under the existing database `rules` root, preserving every other child (especially `bog4`) unchanged. This file is a fragment, NOT a replacement database rules document. It uses anonymous Auth UID ownership to protect taken seats and current-turn writes.
-4. Redeploy and verify two actual authenticated browsers: claim separate seats, reject an attempt to overwrite a taken seat, and exchange boss commands. Mock transport tests are not proof of deployed Firebase permissions.
+`dbg-config.js` specifies the database URL, separate DBG prefix and default long room. The client uses ordinary REST requests with no auth query/token. An optional `?room=` selects another long room, but the family should all use the same link.
 
-Intended family URL once configured: https://westurner22-dad.github.io/dbg/
-Default room: `turner-family`. Optional additional room: `?room=your-room-code`.
+Each browser generates a random local identifier (`dbg_client1`). Seat claims read the current owner and use Firebase ETag conditional PUTs. Occupied seats cannot be replaced through the normal client, and concurrent claims cannot silently overwrite one another. This is not server-enforced authentication: anyone who knows the room code and bypasses the client can read/write/delete that room. The baked-in room code is visible in the public client. Use only for a trusted family campaign, not sensitive information.
 
-Each person opens the same room and chooses an empty seat. Existing `dbg_live1` characters migrate on claim; a local `dbg_live1_before_family` backup is retained. New characters are created after choosing a seat. Other saves (`dbg_p1`, `dbg_demo5`) are unchanged.
+Create by choosing an empty seat. Existing `dbg_live1` characters migrate on claim; local backup `dbg_live1_before_family` is retained. Keep this browser's site data: clearing it loses the owner identifier. No recovery or device-transfer UI is implemented.
 
-The anonymous identity stored on that browser owns its seat. Clearing site data or switching browser/device loses that identity; no cross-device recovery UI is implemented. Anyone who knows the room link can claim a still-empty seat. Use Join family battle in the shared roster to help even from a different realm. A started boss roster is fixed; opening an advancement fight after the seat roster changes starts a regrouped party. absent humans' turns wait for them, never for AI. Battles resume after refresh. Network state polls every 1.5 seconds and uses ETag conditional writes.
+One to four human cultivators fight weekend bosses. Each commands only their own turns. Use Join family battle from the roster to help from another realm. Started parties are snapshots; after a new seat joins, regroup by reopening the advancement fight. Network updates poll every 1.5 seconds while visible. Offline humans' turns wait, never AI substitutes.
 
-Weekend battle UI is human-commanded; HP scales for one to four participants. Every seated human commands their own turn. Weekday modes remain solo. The shared Nascent map skips empty/lower-realm turns and automates only Comrade Ruin, not cultivators. Claim the family seats before the first Nascent map starts: the map roster is currently fixed at creation, so a brand-new seat joining after that is not placed on the existing board. Existing seated players reaching Nascent later can take their turns.
+The shared Nascent roster is fixed at map creation; claim family seats before that map begins. Lower-realm members' turns are skipped until they reach Nascent. Only Comrade Ruin's map turns are automated.
 
-Current tests use an explicitly injected local test transport with UID/ETag ownership enforcement. It is never enabled by the production configuration. Production has no test endpoint and does not fall back to local-only fake multiplayer.
+Exact JSON state is preserved in `_json` alongside metadata because Realtime Database removes empty containers/null fields used by the combat engines. No BoG schema or saves are migrated.
