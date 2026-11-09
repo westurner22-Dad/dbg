@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>DBG prototype</title><style>
+<title>DBG · Cultivators</title><style>
 body{font-family:system-ui,sans-serif;margin:0 auto;background:#111;color:#eee;max-width:520px;padding:8px;padding-bottom:40px;-webkit-text-size-adjust:100%;overflow-x:hidden}
 @media(min-width:700px){body{max-width:760px}.c{font-size:13px}}@media(max-width:380px){button{font-size:14px;padding:8px}.c{font-size:9px}}
 .tip{background:#233;padding:6px;border-radius:6px;margin:4px 0;font-size:14px}.cov{box-shadow:inset 0 0 0 2px #39f}.reach{background-image:linear-gradient(rgba(45,221,85,.18),rgba(45,221,85,.18))}
@@ -17,15 +17,16 @@ input,select,textarea{font-size:16px;padding:6px;width:100%;box-sizing:border-bo
 .me{outline:3px solid #2d5}.rng{box-shadow:inset 0 0 0 2px #fd0}.log{white-space:pre-wrap;font-size:13px;background:#000;padding:6px;max-height:200px;overflow:auto}
 .row{display:flex;flex-wrap:wrap;align-items:center}.big{font-size:22px;font-weight:bold}h2{margin:6px 0}
 .nsb{background:radial-gradient(circle at 30% 20%,#2b2f3d,#12141b 70%),repeating-linear-gradient(45deg,#0000 0 6px,#ffffff05 6px 7px);border-radius:10px;padding:6px;color:#eee;user-select:none;-webkit-user-select:none;touch-action:manipulation}.nhud{font:13px sans-serif;padding:4px 2px}.nmap{position:relative}.nban{position:absolute;left:8%;right:8%;top:40%;text-align:center;background:#000c;color:#fff;font:bold 18px sans-serif;padding:8px;border-radius:20px}.nbar{display:flex;align-items:center;gap:6px;background:#0008;border-radius:20px;padding:6px 8px;margin-top:4px}.nmsg{flex:1;font:14px sans-serif}.npill{border-radius:20px;padding:8px 14px;margin:0;background:#ff8fb8;color:#111;font-weight:bold;border:0}.nmob{background:#c9a3ff}.nsum{font:12px sans-serif;padding:6px 2px}</style></head><body><div id="app"></div>
-<script src="logic.js"></script><script src="nascent.js"></script><script src="htl2.js"></script><script src="ff.js"></script><script src="pkbattle.js"></script><script src="world.js"></script><script src="weekend.js"></script><script src="wkui.js"></script><script src="gear.js"></script><script src="spr.js"></script><script src="demo.js"></script><script>
-const $=s=>document.querySelector(s); let showCov=true, aa=null, G=null; let SKEY=location.hash==='#demo'?'dbg_demo5':'dbg_p1'; let st=JSON.parse(localStorage.getItem(SKEY)||'null')||{c:null,rounds:[]};  let w=null, sel=null, timerI=null;
+<script src="logic.js?v=p24"></script><script src="nascent.js?v=p24"></script><script src="htl2.js?v=p24"></script><script src="ff.js?v=p24"></script><script src="pkbattle.js?v=p24"></script><script src="world.js?v=p24"></script><script src="weekend.js?v=p24"></script><script src="wkui.js?v=p24"></script><script src="gear.js?v=p24"></script><script src="spr.js?v=p24"></script><script src="demo.js?v=p24"></script><script src="live.js?v=p24"></script><script>
+window.LIVE=location.hash!=='#demo';
+const $=s=>document.querySelector(s); let showCov=true, aa=null, G=null; let SKEY=location.hash==='#demo'?'dbg_demo5':'dbg_live1'; let st=JSON.parse(localStorage.getItem(SKEY)||'null')||{c:null,rounds:[]};  let w=null, sel=null, timerI=null;
 const save=()=>localStorage.setItem(SKEY,JSON.stringify(st));
 function log(lines){ st.c.log=(st.c.log||[]).concat(lines).slice(-80); save(); }
 function view(h){ $('#app').innerHTML=h; }
 function create(){ view(`${st.demo?Demo.createHead():`<div class=tip style="border:2px solid #fc6"><b>▶ Demo Run</b>: one continuous campaign, Qi Gathering → Foundation → Core → Nascent finale with 3 AI cultivators (about 1–3 hours). <button onclick="Demo.enter()">Start / continue Demo Run</button></div>`}<h2>Create cultivator</h2>Name<input id=n value="Wes">Role<select id=r>${Object.keys(DBG.ROLES).map(r=>`<option>${r}</option>`)}</select>
  <p>Base 5/5/5/5. Spend exactly <b>10</b> creation points (max 15 in any stat; no focus bonus). Level 1 then adds +1 focus, +1 Affinity, +3 flex (auto to focus).</p>
  ${DBG.ATTR.map(a=>`<div class=row>${a}&nbsp;<input type=number id=a_${a} value=${a=='Aff'?4:2} min=0 max=10 style="width:80px"></div>`).join('')}
- Player slot<select id=slot><option value=1>Player 1</option><option value=2>Player 2</option><option value=3>Player 3</option><option value=4>Player 4</option></select>Equipped weapon<select id=wp><option>Jade Sword</option><option>Iron Staff</option><option>Twin Fans</option><option>Spirit Focus</option><option>Tower Shield & Mace</option></select>Portrait preferences<textarea id=pp placeholder="e.g. tall, silver hair, jade robes"></textarea>
+ Player slot<select id=slot><option value=1>Player 1</option><option value=2>Player 2</option><option value=3>Player 3</option><option value=4>Player 4</option></select>Equipped weapon<select id=wp><option>Jade Sword</option><option>Iron Staff</option><option>Twin Fans</option><option>Spirit Focus</option><option>Tower Shield & Mace</option></select>Portrait change request (saved with your character)<textarea maxlength=1000 id=pp placeholder="e.g. tall, silver hair, jade robes"></textarea>
  <button onclick="doCreate()">Create</button><div id=err></div>`); }
 function doCreate(){ try{ const al={}; DBG.ATTR.forEach(a=>al[a]=+$('#a_'+a).value); st.c=DBG.createCharacter($('#n').value,$('#r').value,al); st.c.portraitPrefs=$('#pp').value; st.c.slot=+$('#slot').value; st.c.weapon=$('#wp').value; save(); Portrait.request(st.c); day(); }catch(e){ $('#err').textContent=e.message; } }
 function day(){ if(st.demo) return Demo.hub(); const c=st.c; const wk=((c.day-1)%7)>=5;
@@ -126,8 +127,8 @@ function htlView(){ const U=HTL2.UNITS;
  htlHud(); }
 function htlHud(){ const g=hg, h=g.hero; $('#hw').textContent=g.wave; $('#hs').textContent=`${st.demo?`Daily waves ${Math.min(2,(st.c.htlWaves||0))}/2 · 💰 ${st.qi.gold}g · `:''}Gate ${Math.round(g.gate)}/${Math.round(g.gateMax)} · Credit ${Math.floor(g.credit)} · HP ${Math.round(h.hp)}/${Math.round(h.mx)}${h.ko>0?' (KO)':''} · ${Math.round(g.t)} s · kills ${g.kills}`;
  $('#hm').textContent=hMsg; $('#t1').textContent=h.t1>0?'Burst '+Math.ceil(h.t1):'Burst'; $('#t2').textContent=h.t2>0?'Rally '+Math.ceil(h.t2):'Rally';
- $('#hctl').innerHTML=g.waveOver?(`<b>${g.result==='clear'?'Wave cleared':'The Gate fell'}</b>&nbsp;`+(g.result==='clear'?'<button onclick="htlNext()">Next wave</button>':'<button onclick="htl()">Retry Watch</button>')+
-   (st.c.level>=10&&(st.c.realmIdx||0)<2?'<button onclick="ageUp()">Age up ⇧</button>':'')+'<button class=s onclick="htlLeave()">Back to day</button>'):'<button class=s onclick="htlLeave()">Leave</button>'; }
+ $('#hctl').innerHTML=g.waveOver?(`<b>${g.result==='clear'?'Wave cleared':'The Gate fell'}</b>&nbsp;`+(g.result==='clear'?(g.wave<10?'<button onclick="htlNext()">Next wave</button>':'<b>All 10 waves defended!</b>'):'<button onclick="htl()">Retry Watch</button>')+
+   (!window.LIVE&&st.c.level>=10&&(st.c.realmIdx||0)<2?'<button onclick="ageUp()">Age up ⇧</button>':'')+'<button class=s onclick="htlLeave()">Back to day</button>'):'<button class=s onclick="htlLeave()">Leave</button>'; }
 function htlLoop(now){ if(!hg||!$('#cv')) return; const dt=Math.min(.1,(now-hLast)/1000); hLast=now; const was=hg.waveOver; HTL2.step(hg,dt);
  if(!was&&hg.waveOver) waveDone(); drawLane(); if(Math.floor(now/250)!==Math.floor((now-dt*1000)/250)||hg.waveOver!==was) htlHud(); hRaf=requestAnimationFrame(htlLoop); }
 function drawLane(){ const cv=$('#cv'), x=cv.getContext('2d'), g=hg, W=1000, Y=300; x.clearRect(0,0,W,420);
@@ -143,8 +144,8 @@ function drawLane(){ const cv=$('#cv'), x=cv.getContext('2d'), g=hg, W=1000, Y=3
  for(const f of g.fx){ x.strokeStyle=f.c; x.lineWidth=6; x.beginPath(); x.arc(f.x,Y-30,200*(1-f.t/.4)+20,0,7); x.stroke(); }
  x.fillStyle='#fff'; x.font='26px sans-serif'; x.fillText('Credit '+Math.floor(g.credit),W-230,40); x.fillText('Queue '+g.queue.length,W-230,74); }
 function waveDone(){ const row=HTL2.waveRow(hg,navigator.userAgent.slice(0,80)); row.t=new Date().toISOString(); (st.waves=st.waves||[]).push(row);
- if(hg.result==='clear'&&hg.wave<=2&&(st.c.htlWaves||0)<2){ st.c.xpToday+=50; st.c.htlWaves=(st.c.htlWaves||0)+1; } if(hg.result==='clear'&&st.demo){ const gd=(14+8*hg.wave)*(1+(st.c.realmIdx||0)); st.qi.gold+=gd; hMsg=''; hg.goldMsg='+'+gd+' gold'; } log(['Hold the Line wave '+hg.wave+': '+hg.result+' in '+row.sec+' s, '+row.kills+' kills']); hMsg=hg.result==='clear'?((hg.goldMsg?hg.goldMsg+'. ':'')+((st.c.htlWaves||0)<2?'Cleared! '+(st.c.htlWaves||0)+'/2 daily waves — one more and you can meditate.':'Cleared! Daily XP done — you can meditate, or keep going for gold.')):'The Collective overwhelmed the Gate.'; hg.goldMsg=''; save(); }
-function htlNext(){ HTL2.startWave(hg); hMsg='Wave '+hg.wave+' incoming.'; htlHud(); }
+ if((!window.LIVE||Live.canXP('htl'))&&hg.result==='clear'&&hg.wave<=2&&(st.c.htlWaves||0)<2){ st.c.xpToday+=50; st.c.htlWaves=(st.c.htlWaves||0)+1; } if(hg.result==='clear'&&st.demo){ const gd=(14+8*hg.wave)*(1+(st.c.realmIdx||0)); st.qi.gold+=gd; hMsg=''; hg.goldMsg='+'+gd+' gold'; } log(['Hold the Line wave '+hg.wave+': '+hg.result+' in '+row.sec+' s, '+row.kills+' kills']); hMsg=hg.result==='clear'?((hg.goldMsg?hg.goldMsg+'. ':'')+((st.c.htlWaves||0)<2?'Cleared! '+(st.c.htlWaves||0)+'/2 daily waves — one more and you can meditate.':'Cleared! Daily XP done — you can meditate, or keep going for gold.')):'The Collective overwhelmed the Gate.'; hg.goldMsg=''; save(); }
+function htlNext(){ if(!hg||hg.wave>=10) return; HTL2.startWave(hg); hMsg='Wave '+hg.wave+' incoming.'; htlHud(); }
 function ageUp(){ st.c.realmIdx=(st.c.realmIdx||0)+1; st.c.realm=HTL2.REALMS[st.c.realmIdx]; st.c.level=1; log(['Age up! Now '+st.c.realm+' 1: x10 power, enemies too; General unlocked.']); save(); htlLeave(); }
 function htlLeave(){ cancelAnimationFrame(hRaf); hg=null; day(); }
 function exportWaves(){ const cols=['t','wave','level','realm','sec','kills','earned','spent','units','gate','gateMax','result','ua'];
@@ -232,7 +233,7 @@ function fStep(){ const b=fb; if(!b||!$('#fs')) return; const e=FF.act(b);
  else fRender();
  if(b.over) return setTimeout(fEnd,900); if(!e||b.phase==='cmd'){ fMsg=''; setTimeout(fCmdUI,e?500:0); return; } fTimer=setTimeout(fStep,760); }
 function fEnd(){ const q=qiState(), b=fb, c=st.c, lt=FF.loot(b); let xp=0; q.bag=Object.assign({},b.items);
- if(b.result==='win'){ if(st.demo) lt.gold=Math.round(lt.gold*(1+(st.c.realmIdx||0))); if(!b.world) q.prog[b.t]++; q.gold+=lt.gold; if(st.demo) lt.items.forEach(i=>{ if(i.k==='treasure') i.k='material'; }); q.inv.push(...lt.items); if((q.wins||0)<2&&c.xpToday<DBG.XP_GOAL){ c.xpToday+=50; xp=50; } q.wins=(q.wins||0)+1; }
+ if(b.result==='win'){ if(st.demo) lt.gold=Math.round(lt.gold*(1+(st.c.realmIdx||0))); if(!b.world) q.prog[b.t]++; q.gold+=lt.gold; if(st.demo) lt.items.forEach(i=>{ if(i.k==='treasure') i.k='material'; }); q.inv.push(...lt.items); if((!window.LIVE||Live.canXP('sect'))&&(q.wins||0)<2&&c.xpToday<DBG.XP_GOAL){ c.xpToday+=50; xp=50; } q.wins=(q.wins||0)+1; }
  const lootTxt=b.result==='win'?lt.gold+'g'+(lt.items.length?' + '+lt.items.map(i=>i.n).join(' + '):''):'none';
  q.log.push({t:new Date().toISOString(),territory:FF.TERR[b.t].n,level:b.L,enemies:b.E.length,rounds:b.round,used:b.used.join(' ')||'none',sec:Math.round((performance.now()-fT0)/1000),result:b.result,survivors:FF.alive(b.P).length+'/4',loot:lootTxt,ua:navigator.userAgent.slice(0,80)});
  log(['Sect Conquest '+FF.TERR[b.t].n+': '+b.result+' in '+b.round+' rounds'+(xp?' (+50 XP)':'')+(q.prog[b.t]===3&&b.result==='win'?' — territory conquered!':'')]); save();
@@ -252,7 +253,7 @@ function worldBattle(kind,npcId){ const q=qiState(), c=st.c, s=st.world, path=FF
  view(`<div id=pkv></div>`);
  PK.start($('#pkv'),{ranks:st.demo?Demo.ranks():null,name:c.name||'You',path,L:c.level,trainer:kind==='trainer',hpFrac:pk[0]>0?pk[0]:1,mpFrac:pk[1],bag:q.bag,gear:st.demo?Demo.gx():(q.gear?q.gear.bonus:0),slots:q.slots,beasts:kind==='trainer'?null:World.map.beasts,lvB:World.map.lvB||0},b=>{
   q.bag=Object.assign({},b.bag); s.pk=[b.me.hp/b.me.mx,b.me.mp/b.me.mmp]; const lines=[];
-  if(b.result==='win'){ const xp=Math.max(0,Math.min(40,DBG.XP_GOAL-c.xpToday)), gold=st.demo?Math.round((b.trainer?40+Math.floor(Math.random()*11):16+Math.floor(Math.random()*9))*(1+(st.c.realmIdx||0))):(b.trainer?8+Math.floor(Math.random()*5):2+Math.floor(Math.random()*3));
+  if(b.result==='win'){ const xp=window.LIVE&&!Live.canXP('world')?0:Math.max(0,Math.min(40,DBG.XP_GOAL-c.xpToday)), gold=st.demo?Math.round((b.trainer?20+Math.floor(Math.random()*6):8+Math.floor(Math.random()*5))*(1+(st.c.realmIdx||0))):(b.trainer?8+Math.floor(Math.random()*5):2+Math.floor(Math.random()*3));
    c.xpToday+=xp; q.gold+=gold; lines.push(xp?`${c.name||'You'} gained ${xp} XP!`:'Daily XP goal already met.'); lines.push(`Got ${gold} gold!`);
    if(Math.random()<.3||b.trainer){ const m=b.foe.name+' '+(b.trainer?'Banner Fang':['Pelt','Core','Scale','Feather'][Math.floor(Math.random()*4)]); q.inv.push({k:'material',n:m,val:(b.trainer?20:6)*(1+(World.map.lvB||0))}); lines.push(`Found ${m}! (sell it in the Shop)`); }
    if(xp&&c.xpToday>=DBG.XP_GOAL) lines.push('Daily XP goal reached! Meditate to grow your Qi.');
@@ -263,6 +264,6 @@ function worldBattle(kind,npcId){ const q=qiState(), c=st.c, s=st.world, path=FF
   ()=>worldOpen()); }
 
 function wkStart(x){ const c=st.c||{}; WKUI.open({...(x||{}),path:FF.ROLE2PATH[c.role]||'Body',name:c.name||'You',slots:st.qi&&st.qi.slots,back:()=>{ if(location.hash==='#weekend') history.replaceState(null,'',location.pathname); st.c?day():create(); }}); }
-if(SKEY==='dbg_demo5'&&!st.demo) st.demo=Demo.init(); if(st.demo) globalThis.DEMO_K=Demo.K;
-location.hash==='#weekend'?(st.c?day():create(),wkStart()):st.c?(location.hash==='#nascent'?nasStart():day()):create();
+if(!st.demo) st.demo=Demo.init(); if(st.demo) globalThis.DEMO_K=window.LIVE?1:Demo.K;
+window.LIVE?(st.c?day():create()):location.hash==='#weekend'?(st.c?day():create(),wkStart()):st.c?(location.hash==='#nascent'?nasStart():day()):create();
 </script></body></html>

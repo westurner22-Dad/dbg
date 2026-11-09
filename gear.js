@@ -122,7 +122,7 @@ function kitStock(ri,refresh){ const qs=[['Rare'],['Rare','Epic'],['Epic','Legen
  Object.keys(KITS).forEach(role=>qs.forEach(q=>KITS[role].pc.forEach((_,i)=>{ const g=kitPiece(role,i,q,ri+(refresh?1:0)); g.price=Math.round(KPRICE[q]*m/10)*10; out.push(g); }))); return out; }
 function stock(realmIdx,rng,refresh){ rng=rng||Math.random; const m=1+.35*realmIdx+(refresh?.25:0), out=[]; const qs=refresh?['Epic','Epic','Legendary','Legendary']:realmIdx>=2?['Rare','Epic','Epic','Legendary']:['Rare','Rare','Epic','Epic'];
  qs.forEach(q=>{ const g=rand(q,realmIdx+(refresh?1:0),rng); g.price=Math.round(PRICE[q]*m/10)*10; out.push(g); });
- return out.concat(kitStock(realmIdx,refresh)); }
+ if(realmIdx===0){ ['head','armor','arms','legs','main','offS'].forEach((kind,i)=>{ const g=make(kind,'Common',0,()=>.4); g.price=[25,35,20,20,40,25][i]; out.push(g); }); out.push(Object.assign(make('arms','Rare',0,()=>.4),{price:110}),Object.assign(make('legs','Rare',0,()=>.4),{price:100})); } return out.concat(kitStock(realmIdx,refresh)); }
 const THEME=r=>r.T.fx==='heal'||r.T.fx==='regen'?'something that mends':r.T.fx==='shield'||r.T.fx==='dr'?'something that endures':r.T.fx==='mana'?'a quiet mind':'a partner that strikes harder';
 function attempt(known,inputs,realmIdx,rng,prog){ rng=rng||Math.random; const key=inputs.slice().sort(); prog=prog||{};
  const r=RECIPES.find(x=>x.in.length===key.length&&x.in.every((v,i)=>v===key[i])&&!known.includes(x.n));

@@ -14,16 +14,16 @@ const UNITS={Disciple:{cost:15,hp:.35,dmg:.25,rng:22,spd:55,col:'#4c4'},Archer:{
   Healer:{cost:30,hp:.25,dmg:.05,rng:120,spd:45,heal:.06,col:'#fff',back:75},General:{cost:120,hp:1.2,dmg:.8,rng:28,spd:40,aura:.2,col:'#fd0',realm:1}};
 const G=(L,R)=>(globalThis.DEMO_K||1)*(1000+60*(L-1))*Math.pow(10,R), E=(L,R)=>(globalThis.DEMO_K||1)*(120+10*L)*Math.pow(10,R);
 function hero(role,L,R){ const [a,b,c,d]=PL[role], t=(L-1)/9; const bf=R<=1?1.25:1; return {hp:bf*(a+(c-a)*t)*Math.pow(10,R), dpt:bf*(b+(d-b)*t)*KIT[role]*Math.pow(10,R)}; }
-// wave budget: locked B(L)=18,000+1,500(L-1) at wave 1, then +35% per wave and x1.08 per level so the Collective eventually overwhelms
-const budget=(L,R,wave)=>Math.min(1,.55+.1*(L-1))*(18000+1500*(L-1))*Math.pow(1.10,L-1)*Math.pow(1.32,wave-1)*Math.pow(10,R);
+// Ten-wave watch: tighter spawn spacing, +8% enemy HP and +10% hit per wave; recruitment and gear matter.
+const budget=(L,R,wave)=>Math.min(1,.55+.1*(L-1))*(18000+1500*(L-1))*Math.pow(1.06,L-1)*Math.pow(1.30,wave-1)*Math.pow(10,R);
 function newGame(role,L,R,opt={}){ const h=hero(role,L,R);
   return {role,L,R:R||0,wave:0,t:0,gateMax:2000*Math.pow(10,R||0)*(1+.05*(L-1)),gate:0,credit:40,earned:0,spent:0,bought:{},
     hero:{x:120,hp:h.hp,mx:h.hp,dpt:h.dpt,cd:0,ko:0,move:0,t1:0,t2:0},foes:[],allies:[],fx:[],log:[],rng:opt.rng||Math.random,over:false}; }
-function startWave(g){ g.wave++; g.t=0; g.kills=0; g.waveCredit0=g.earned; g.waveSpent0=g.spent; g.boughtW={}; g.gate=g.wave===1?g.gateMax:Math.min(g.gateMax,g.gate+.25*g.gateMax);
+function startWave(g){ if(g.wave>=10) return false; g.wave++; g.t=0; g.kills=0; g.waveCredit0=g.earned; g.waveSpent0=g.spent; g.boughtW={}; g.gate=g.wave===1?g.gateMax:Math.min(g.gateMax,g.gate+.25*g.gateMax);
   const r=g.rng, pool=Object.keys(EN).filter(k=>!EN[k].boss&&(EN[k].lv||1)<=g.L); let B=budget(g.L,g.R,g.wave), q=[];
   if(g.wave%3===0||r()<2/15){ q.push('Hammerov'); B-=EN.Hammerov.hp*G(g.L,g.R); }
   while(B>0.3*G(g.L,g.R)){ const k=pool[Math.floor(r()*pool.length)]; q.push(k); B-=EN[k].hp*G(g.L,g.R); }
-  const spread=Math.min(55,20+q.length*1.6); g.queue=q.map((k,i)=>({k,at:spread*i/q.length+r()*2})).sort((a,b)=>a.at-b.at); g.waveOver=false; g.result=null; }
+  const spread=Math.min(48,18+q.length*1.2); g.queue=q.map((k,i)=>({k,at:spread*i/q.length+r()*2})).sort((a,b)=>a.at-b.at); g.waveOver=false; g.result=null; }
 function buy(g,k){ const u=UNITS[k]; if(u.realm&&g.R<u.realm) return 'General unlocks at Core (age up)'; if(g.credit<u.cost) return 'Need '+u.cost+' credit';
   g.credit-=u.cost; g.spent+=u.cost; g.boughtW[k]=(g.boughtW[k]||0)+1; g.bought[k]=(g.bought[k]||0)+1;
   g.allies.push({k,x:GATE_X+10,hp:1.25*u.hp*g.hero.mx,mx:1.25*u.hp*g.hero.mx,cd:0}); return k+' joins the line'; }
@@ -32,7 +32,7 @@ function tech(g,n){ const h=g.hero; if(h.ko) return 'Knocked out'; if(n===1){ if
   if(h.t2>0) return 'Cooling down'; h.t2=20; h.hp=Math.min(h.mx,h.hp+.35*h.mx); g.allies.forEach(a=>a.hp=Math.min(a.mx,a.hp+.35*a.mx)); g.fx.push({x:h.x,t:.4,c:'#4f4'}); return 'Rally: +35% HP'; }
 function dmg(g,f,d){ f.ht=.18; f.hp-=d*(1-(EN[f.k].dr||0)); if(f.hp<=0&&!f.dead){ f.dead=true; const c=EN[f.k].cr; g.credit+=c; g.earned+=c; g.kills++; } }
 function step(g,dt){ if(g.waveOver) return; g.t+=dt; const h=g.hero, L=g.L, R=g.R; g.foes.forEach(f=>{ if(f.ht>0) f.ht-=dt; }); [h,...g.allies].forEach(b=>{ if(b.hl>0) b.hl-=dt; });
-  while(g.queue.length&&g.queue[0].at<=g.t){ const k=g.queue.shift().k, e=EN[k]; g.foes.push({k,x:SPAWN_X,hp:e.hp*G(L,R),mx:e.hp*G(L,R),cd:0,slow:0}); }
+  while(g.queue.length&&g.queue[0].at<=g.t){ const k=g.queue.shift().k, e=EN[k]; g.foes.push({k,x:SPAWN_X,hp:e.hp*G(L,R)*(1+.08*(g.wave-1)),mx:e.hp*G(L,R)*(1+.08*(g.wave-1)),cd:0,slow:0}); }
   const aura=g.foes.some(f=>EN[f.k].aura)?1.35:1;
   // hero
   h.t1=Math.max(0,h.t1-dt); h.t2=Math.max(0,h.t2-dt);
@@ -54,7 +54,7 @@ function step(g,dt){ if(g.waveOver) return; g.t+=dt; const h=g.hero, L=g.L, R=g.
   // foes
   for(const f of g.foes){ if(f.dead) continue; const e=EN[f.k]; f.cd-=dt; f.slow=Math.max(0,f.slow-dt);
     const targets=[...g.allies.map(a=>({o:a,x:a.x})), ...(h.ko>0?[]:[{o:h,x:h.x}])].filter(o=>o.x<=f.x&&f.x-o.x<=e.rng+10).sort((a,b)=>b.x-a.x);
-    const hit=e.hit*E(L,R)*aura;
+    const hit=e.hit*E(L,R)*aura*(1+.10*(g.wave-1));
     if(targets.length){ if(f.cd<=0){ const o=targets[0].o; o.hp-=hit*(o===h&&g.role==='Vanguard'?.5:1)*(o===h?1-Math.min(.6,.1):1); f.cd=TURN;
         if(o===h&&h.hp<=0){ h.hp=0; h.ko=6; g.log.push('Cultivator knocked out (6 s)'); } } }
     else if(f.x<=GATE_X){ if(f.cd<=0){ g.gate-=hit; f.cd=TURN; } }
