@@ -86,7 +86,7 @@ function tut(k,force){ const d=D(); if(!d) return; d.tut=d.tut||{}; if(!force&&d
 function pop(html,done){ const o=document.createElement('div'); o.id='dtut'; o.innerHTML=`<div class=dtc>${html}<button class=dgo id=dtok>Got it</button></div>`; const old=$('#dtut'); if(old) old.remove(); document.body.appendChild(o); o.querySelector('#dtok').addEventListener('click',()=>{ o.remove(); done&&done(); }); }
 function toast(t){ document.querySelectorAll('.dtoast').forEach(x=>x.remove()); const o=document.createElement('div'); o.className='dtoast'; o.textContent=t; document.body.appendChild(o); setTimeout(()=>o.remove(),1400); }
 const MODEN={world:'Overworld',htl:'Hold the Line',sect:'Sect Conquest',nas:'War for the Map'};
-function barText(){ const d=D(), c=st.c, live=d.playing===curMode(), g=st.qi.gold; let t=`${root.LIVE?Live.dateLabel():DAYS[Math.min(5,d.d)]} · Wk ${d.week+1}/4 · ${c.realm} ${c.level} · 💰 ${g}g · `;
+function barText(){ const d=D(), c=st.c, live=d.playing===curMode(), g=st.qi.gold, v=mode==='world'&&root.worldVitals?root.worldVitals():null; let t=`${root.LIVE?Live.dateLabel():DAYS[Math.min(5,d.d)]} · Wk ${d.week+1}/4 · ${c.realm} ${c.level} · 💰 ${g}g · `+(v?`❤️ ${v.hp}/${v.mx} · 💧 ${v.mp}/${v.mmp} · `:'');
  if(mode==='nas'){ const G=st.nas2; return t+(G?(G.ruinFell?'⚔️ Rivals’ war':'Gray hexes '+G.hex.filter(h=>h.o===4).length)+` · Rounds today ${Math.max(0,G.round-(d.nasR0||1))}/2`:''); }
  if(!live) return t+'loot & gold only';
  return t+(mode==='htl'?`Waves ${Math.min(2,c.htlWaves||0)}/2 · `:'')+`XP ${Math.min(c.xpToday,DBG.XP_GOAL)}/${DBG.XP_GOAL}`+(c.xpToday>=DBG.XP_GOAL?' ✓ meditate':''); }
